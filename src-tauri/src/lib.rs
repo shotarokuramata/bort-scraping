@@ -1,4 +1,5 @@
 mod fetch;
+mod parse;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -9,11 +10,18 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn get_body(date: &str) -> String {
     let date_str = date.replace("-", "");
-    if let Err(e) = fetch::fetch_all_race_info(&date_str) {
-        format!("an error occurred: {}", e)
+
+    let mut result = fetch::fetch_all_race_info(&date_str);
+    if result.is_err() {
+        return format!("an error occurred: {}", result.unwrap_err());
     } else {
-        format!("Success: {}", date)
     }
+
+    let content = result.unwrap();
+
+    let url_list = parse::get_url_list_from_race_index(&content);
+
+    format!("Success: {}", "ALL")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

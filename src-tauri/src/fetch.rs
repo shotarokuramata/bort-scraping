@@ -22,13 +22,10 @@ pub fn fetch_all_race_info(today: &str) -> Result<String, Box<dyn std::error::Er
     let file_dir = format!("./bort-html/{}", today);
     fs::create_dir_all(Path::new(&file_dir))?;
     let file_path = format!("./bort-html/{}/race_index.html", today);
-    let mut file = File::create(file_path)?;
+    let mut file = File::create(&file_path)?;
     file.write_all(&content)?;
 
-    // HTMLをStringに変換
-    let html_string = std::str::from_utf8(&content)?.to_string();
-
-    Ok(html_string)
+    Ok(file_path)
 }
 
 #[test]
