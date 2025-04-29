@@ -1,7 +1,9 @@
 use reqwest::blocking::get;
 use scraper::{Html, Selector};
+use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 //　その日のレース情報のhtmlをそろえて保存する関数→単一のレース情報をパースする関数→csvに追記する関数
 
@@ -17,7 +19,10 @@ pub fn fetch_all_race_info(today: &str) -> Result<String, Box<dyn std::error::Er
     let content = response.bytes()?;
 
     // HTMLをファイルに保存
-    let mut file = File::create("test.html")?;
+    let file_dir = format!("./bort-html/{}", today);
+    fs::create_dir_all(Path::new(&file_dir))?;
+    let file_path = format!("./bort-html/{}/race_index.html", today);
+    let mut file = File::create(file_path)?;
     file.write_all(&content)?;
 
     // HTMLをStringに変換
