@@ -1,6 +1,8 @@
 use headless_chrome::{Browser, LaunchOptions};
+use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 pub fn fetch_shusso_info_from_kyoteibiyori(
     race_no: u32,
@@ -41,6 +43,12 @@ pub fn fetch_shusso_info_from_kyoteibiyori(
 
     // 必要ならデータをパース
     let data = get_escaped_flame_info(&content)?;
+
+    let file_dir = format!("./bort-html/{}", today);
+    fs::create_dir_all(Path::new(&file_dir))?;
+    let file_path = format!("./bort-html/{}/biyori.html", today);
+    let mut file = File::create(&file_path)?;
+    file.write_all(&content.as_bytes())?;
 
     Ok(data)
 }

@@ -1,7 +1,9 @@
 mod fetch;
 mod headress;
-mod parse;
-
+mod parse {
+    pub mod biyori;
+    pub mod official;
+}
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -20,7 +22,7 @@ fn get_body(date: &str) -> String {
 
     let content = result.unwrap();
 
-    let url_suffix_list = parse::get_race_param_list_from_race_index(&content);
+    let url_suffix_list = parse::official::get_race_param_list_from_race_index(&content);
 
     format!("Success: {}", "ALL")
 }
@@ -29,14 +31,19 @@ fn get_body(date: &str) -> String {
 fn get_shusso_info() -> String {
     let race_no = 1;
     let place_no = 2;
-    let today = "2023-10-01";
+    let today = "20231001";
     let slider = 0;
-    let mut result =
-        headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, today, slider);
+    let result = headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, today, slider);
     if result.is_err() {
         return format!("an error occurred: {}", result.unwrap_err());
     } else {
-        return format!("Success: {}", result.unwrap());
+    }
+
+    let mut win_rate_list = parse::biyori::get_win_rate_info(&result.unwrap());
+    if win_rate_list.is_err() {
+        return format!("an error occurred: {}", win_rate_list.unwrap_err());
+    } else {
+        return format!("Success: {:?}", win_rate_list.unwrap());
     }
 }
 
