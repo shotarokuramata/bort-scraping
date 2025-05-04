@@ -50,6 +50,8 @@ pub fn fetch_shusso_info_from_kyoteibiyori(
     let mut file = File::create(&file_path)?;
     file.write_all(&content.as_bytes())?;
 
+    drop(browser);
+    drop(tab);
     Ok(data)
 }
 
@@ -69,7 +71,7 @@ mod tests {
         let race_no = 1;
         let place_no = 2;
         let today = "20231001";
-        let slider = 0;
+        let slider = 1;
 
         // 関数を呼び出して結果を確認
         match fetch_shusso_info_from_kyoteibiyori(race_no, place_no, today, slider) {
