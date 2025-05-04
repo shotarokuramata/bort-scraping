@@ -1,7 +1,7 @@
 use scraper::{Html, Selector};
 use url::Url;
 
-pub fn get_url_list_from_race_index(html: &str) -> Vec<String> {
+pub fn get_race_param_list_from_race_index(html: &str) -> Vec<String> {
     let document = Html::parse_document(html);
 
     let selector = Selector::parse("a[href]").unwrap();
@@ -26,10 +26,10 @@ pub fn get_url_list_from_race_index(html: &str) -> Vec<String> {
 }
 
 #[test]
-fn test_get_url_list_from_race_index() {
+fn test_get_race_param_list_from_race_index() {
     use std::fs;
     let file_path = "./bort-html/20231001/race_index.html";
     let html_string = fs::read_to_string(file_path).unwrap();
-    let url_list = get_url_list_from_race_index(&html_string);
+    let url_list = get_race_param_list_from_race_index(&html_string);
     println!("{:?}", url_list);
 }

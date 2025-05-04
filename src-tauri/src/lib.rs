@@ -1,4 +1,5 @@
 mod fetch;
+mod headress;
 mod parse;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -19,16 +20,31 @@ fn get_body(date: &str) -> String {
 
     let content = result.unwrap();
 
-    let url_list = parse::get_url_list_from_race_index(&content);
+    let url_suffix_list = parse::get_race_param_list_from_race_index(&content);
 
     format!("Success: {}", "ALL")
+}
+
+#[tauri::command]
+fn get_shusso_info() -> String {
+    let race_no = 1;
+    let place_no = 2;
+    let today = "2023-10-01";
+    let slider = 0;
+    let mut result =
+        headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, today, slider);
+    if result.is_err() {
+        return format!("an error occurred: {}", result.unwrap_err());
+    } else {
+        return format!("Success: {}", result.unwrap());
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_body])
+        .invoke_handler(tauri::generate_handler![greet, get_body, get_shusso_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
