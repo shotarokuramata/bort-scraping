@@ -13,14 +13,14 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn get_biyori_info(date: &str) -> String {
+fn get_biyori_info(date: &str, race_number: &str, place_number: &str) -> String {
     let date_str = date.replace("-", "");
 
-    let race_no = 1;
-    let place_no = 2;
-    let today = date_str;
-    let slider = 1;
-    let result = headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, &today, slider);
+    let race_no = race_number.parse::<u32>().unwrap();
+    let place_no = place_number.parse::<u32>().unwrap();
+    let slider = 1; // 枠別情報
+    let result =
+        headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, &date_str, slider);
     if result.is_err() {
         return format!("an error occurred: {}", result.unwrap_err());
     } else {
