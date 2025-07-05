@@ -3,6 +3,7 @@ mod headress;
 mod parse {
     pub mod biyori {
         pub mod flame;
+        pub mod table_analyzer;
     }
     pub mod official;
 }
