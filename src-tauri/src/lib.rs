@@ -16,8 +16,14 @@ fn greet(name: &str) -> String {
 fn get_biyori_info(date: &str, race_number: &str, place_number: &str) -> String {
     let date_str = date.replace("-", "");
 
-    let race_no = race_number.parse::<u32>().unwrap();
-    let place_no = place_number.parse::<u32>().unwrap();
+    let race_no = match race_number.parse::<u32>() {
+        Ok(n) => n,
+        Err(_) => return format!("Invalid race number: {}", race_number),
+    };
+    let place_no = match place_number.parse::<u32>() {
+        Ok(n) => n,
+        Err(_) => return format!("Invalid place number: {}", place_number),
+    };
     let slider = 1; // 枠別情報
     let result =
         headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, &date_str, slider);

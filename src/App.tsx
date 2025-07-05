@@ -6,8 +6,8 @@ import "./App.css";
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
   const [date, setDate] = useState("");
-  const [raceNumber, setRaceNumber] = useState("");
-  const [placeNumber, setPlaceNumber] = useState("");
+  const [raceNumber, setRaceNumber] = useState("1");
+  const [placeNumber, setPlaceNumber] = useState("1");
 
   async function greet() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
