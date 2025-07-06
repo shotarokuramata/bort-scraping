@@ -14,31 +14,29 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn get_biyori_info(date: &str, race_number: &str, place_number: &str) -> String {
+fn get_biyori_info(date: &str, race_number: &str, place_number: &str) -> Result<parse::biyori::flame::RaceData, String> {
     let date_str = date.replace("-", "");
 
     let race_no = match race_number.parse::<u32>() {
         Ok(n) => n,
-        Err(_) => return format!("Invalid race number: {}", race_number),
+        Err(_) => return Err(format!("Invalid race number: {}", race_number)),
     };
     let place_no = match place_number.parse::<u32>() {
         Ok(n) => n,
-        Err(_) => return format!("Invalid place number: {}", place_number),
+        Err(_) => return Err(format!("Invalid place number: {}", place_number)),
     };
     let slider = 1; // 枠別情報
     let result =
         headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, &date_str, slider);
     if result.is_err() {
-        return format!("an error occurred: {}", result.unwrap_err());
-    } else {
+        return Err(format!("an error occurred: {}", result.unwrap_err()));
     }
 
     let race_data = parse::biyori::flame::get_escaped_flame_info(&result.unwrap());
-    if race_data.is_err() {
-        return format!("an error occurred: {}", race_data.unwrap_err());
-    } else {
+    match race_data {
+        Ok(data) => Ok(data),
+        Err(err) => Err(format!("an error occurred: {}", err)),
     }
-    return format!("Success : {}", race_data.unwrap());
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
