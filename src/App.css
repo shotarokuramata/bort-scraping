@@ -308,6 +308,151 @@ button {
   }
 }
 
+/* 新しいデータ表示用スタイル */
+.player-info-section,
+.basic-stats-section,
+.performance-section,
+.st-section {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #eee;
+}
+
+.player-info-section:last-child,
+.basic-stats-section:last-child,
+.performance-section:last-child,
+.st-section:last-child {
+  border-bottom: none;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.info-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.performance-grid,
+.st-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.performance-card,
+.st-card {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+}
+
+.performance-card h3,
+.st-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1.1rem;
+  border-bottom: 2px solid #396cd8;
+  padding-bottom: 0.5rem;
+}
+
+.performance-data,
+.st-data {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.perf-item,
+.st-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: #ffffff;
+  border-radius: 4px;
+  border-left: 3px solid #396cd8;
+}
+
+.perf-item span:first-child,
+.st-item span:first-child {
+  font-weight: 600;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.perf-item span:last-child,
+.st-item span:last-child {
+  font-weight: 700;
+  color: #396cd8;
+  font-size: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .player-info-section,
+  .basic-stats-section,
+  .performance-section,
+  .st-section {
+    border-bottom-color: #555;
+  }
+
+  .info-label {
+    color: #ccc;
+  }
+
+  .info-value {
+    color: #f6f6f6;
+  }
+
+  .performance-card,
+  .st-card {
+    background-color: #4a4a4a;
+    border-color: #666;
+  }
+
+  .performance-card h3,
+  .st-card h3 {
+    color: #f6f6f6;
+    border-bottom-color: #24c8db;
+  }
+
+  .perf-item,
+  .st-item {
+    background-color: #2f2f2f;
+    border-left-color: #24c8db;
+  }
+
+  .perf-item span:first-child,
+  .st-item span:first-child {
+    color: #ccc;
+  }
+
+  .perf-item span:last-child,
+  .st-item span:last-child {
+    color: #24c8db;
+  }
+}
+
 @media (max-width: 768px) {
   .main-content {
     flex-direction: column;
@@ -324,5 +469,19 @@ button {
   
   .race-data {
     padding: 1.5rem;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-grid,
+  .st-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-card,
+  .st-card {
+    padding: 1rem;
   }
 }
