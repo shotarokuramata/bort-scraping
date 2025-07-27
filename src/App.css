@@ -312,7 +312,8 @@ button {
 .player-info-section,
 .basic-stats-section,
 .performance-section,
-.st-section {
+.st-section,
+.winning-hand-section {
   margin-bottom: 2rem;
   padding-bottom: 2rem;
   border-bottom: 1px solid #eee;
@@ -321,7 +322,8 @@ button {
 .player-info-section:last-child,
 .basic-stats-section:last-child,
 .performance-section:last-child,
-.st-section:last-child {
+.st-section:last-child,
+.winning-hand-section:last-child {
   border-bottom: none;
 }
 
@@ -351,7 +353,8 @@ button {
 }
 
 .performance-grid,
-.st-grid {
+.st-grid,
+.winning-hand-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
@@ -359,7 +362,8 @@ button {
 }
 
 .performance-card,
-.st-card {
+.st-card,
+.winning-hand-card {
   background-color: #f8f9fa;
   border-radius: 8px;
   padding: 1.5rem;
@@ -367,7 +371,8 @@ button {
 }
 
 .performance-card h3,
-.st-card h3 {
+.st-card h3,
+.winning-hand-card h3 {
   margin-top: 0;
   margin-bottom: 1rem;
   color: #333;
@@ -377,14 +382,16 @@ button {
 }
 
 .performance-data,
-.st-data {
+.st-data,
+.winning-hand-data {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
 
 .perf-item,
-.st-item {
+.st-item,
+.winning-hand-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -395,14 +402,16 @@ button {
 }
 
 .perf-item span:first-child,
-.st-item span:first-child {
+.st-item span:first-child,
+.winning-hand-item span:first-child {
   font-weight: 600;
   color: #666;
   font-size: 0.95rem;
 }
 
 .perf-item span:last-child,
-.st-item span:last-child {
+.st-item span:last-child,
+.winning-hand-item span:last-child {
   font-weight: 700;
   color: #396cd8;
   font-size: 1rem;
@@ -412,7 +421,8 @@ button {
   .player-info-section,
   .basic-stats-section,
   .performance-section,
-  .st-section {
+  .st-section,
+  .winning-hand-section {
     border-bottom-color: #555;
   }
 
@@ -425,30 +435,35 @@ button {
   }
 
   .performance-card,
-  .st-card {
+  .st-card,
+  .winning-hand-card {
     background-color: #4a4a4a;
     border-color: #666;
   }
 
   .performance-card h3,
-  .st-card h3 {
+  .st-card h3,
+  .winning-hand-card h3 {
     color: #f6f6f6;
     border-bottom-color: #24c8db;
   }
 
   .perf-item,
-  .st-item {
+  .st-item,
+  .winning-hand-item {
     background-color: #2f2f2f;
     border-left-color: #24c8db;
   }
 
   .perf-item span:first-child,
-  .st-item span:first-child {
+  .st-item span:first-child,
+  .winning-hand-item span:first-child {
     color: #ccc;
   }
 
   .perf-item span:last-child,
-  .st-item span:last-child {
+  .st-item span:last-child,
+  .winning-hand-item span:last-child {
     color: #24c8db;
   }
 }
@@ -476,12 +491,14 @@ button {
   }
 
   .performance-grid,
-  .st-grid {
+  .st-grid,
+  .winning-hand-grid {
     grid-template-columns: 1fr;
   }
 
   .performance-card,
-  .st-card {
+  .st-card,
+  .winning-hand-card {
     padding: 1rem;
   }
 }

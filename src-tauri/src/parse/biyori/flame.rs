@@ -58,6 +58,15 @@ pub struct STRelatedData {
 }
 
 #[derive(Debug, serde::Serialize)]
+pub struct WinningHandData {
+    pub escape_rate_6months: Option<f64>,
+    pub let_escape_rate_6months: Option<f64>,
+    pub pierced_rate_6months: Option<f64>,
+    pub pierce_rate_6months: Option<f64>,
+    pub overtake_rate_6months: Option<f64>,
+}
+
+#[derive(Debug, serde::Serialize)]
 pub struct DetailedPerformanceData {
     pub first_place_rate: PerformanceData,
     pub top_2_rate: PerformanceData,
@@ -79,6 +88,7 @@ pub struct RaceData {
     pub player_basic_info: PlayerBasicInfo,
     pub detailed_performance: DetailedPerformanceData,
     pub st_data: STRelatedData,
+    pub winning_hand: WinningHandData,
 }
 
 impl PlayerBasicInfo {
@@ -155,6 +165,18 @@ impl STRelatedData {
     }
 }
 
+impl WinningHandData {
+    pub fn new() -> Self {
+        WinningHandData {
+            escape_rate_6months: None,
+            let_escape_rate_6months: None,
+            pierced_rate_6months: None,
+            pierce_rate_6months: None,
+            overtake_rate_6months: None,
+        }
+    }
+}
+
 impl DetailedPerformanceData {
     pub fn new() -> Self {
         DetailedPerformanceData {
@@ -181,6 +203,7 @@ impl RaceData {
             player_basic_info: PlayerBasicInfo::new(),
             detailed_performance: DetailedPerformanceData::new(),
             st_data: STRelatedData::new(),
+            winning_hand: WinningHandData::new(),
         }
     }
 }
@@ -358,6 +381,9 @@ pub fn get_escaped_flame_info(content: &str) -> Result<RaceData, Box<dyn std::er
 
     // ST関連データを抽出
     race_data.st_data = extract_st_related_data(&document)?;
+
+    // 決まり手データを抽出
+    race_data.winning_hand = extract_winning_hand_data(&document)?;
 
     Ok(race_data)
 }
@@ -800,6 +826,151 @@ fn parse_st_value(text: &str) -> Result<Option<f64>, Box<dyn std::error::Error>>
     }
 }
 
+fn extract_winning_hand_data(document: &Html) -> Result<WinningHandData, Box<dyn std::error::Error>> {
+    let race_basic_selector = Selector::parse("#raceBasic").unwrap();
+    let table_selector = Selector::parse("table.table_fixed").unwrap();
+    let row_selector = Selector::parse("tr").unwrap();
+    let cell_selector = Selector::parse("td").unwrap();
+
+    let race_basic = document
+        .select(&race_basic_selector)
+        .next()
+        .ok_or("raceBasic not found")?;
+    let table = race_basic
+        .select(&table_selector)
+        .next()
+        .ok_or("Table not found")?;
+
+    let mut winning_hand = WinningHandData::new();
+
+    // テーブルの全行を取得
+    let rows: Vec<_> = table.select(&row_selector).collect();
+
+    // 決まり手セクションを探す
+    let mut winning_hand_start_index = None;
+    for (i, row) in rows.iter().enumerate() {
+        let cells: Vec<_> = row.select(&cell_selector).collect();
+        for cell in cells {
+            let text = cell.text().collect::<String>();
+            if text.trim() == "決まり手" {
+                winning_hand_start_index = Some(i);
+                break;
+            }
+        }
+        if winning_hand_start_index.is_some() {
+            break;
+        }
+    }
+
+    if let Some(start_index) = winning_hand_start_index {
+        // 決まり手データを構造化して抽出（直近6ヶ月）
+        
+        // 逃げ/逃しの組み合わせを探す (行63-64)
+        for i in start_index..rows.len().min(start_index + 10) {
+            if let Some(row) = rows.get(i) {
+                let row_text = row.text().collect::<String>();
+                if row_text.contains("逃げ") && row_text.contains("逃し") {
+                    // 次の行に逃げ率と逃し率のデータがある
+                    if let Some(data_row) = rows.get(i + 1) {
+                        let data_cells: Vec<_> = data_row.select(&cell_selector).collect();
+                        if data_cells.len() >= 2 {
+                            // 1つ目のセルが逃げ率、2つ目のセルが逃し率
+                            if let Some(escape_cell) = data_cells.get(0) {
+                                let escape_text = escape_cell.text().collect::<String>();
+                                if let Ok(Some(value)) = parse_winning_hand_value(&escape_text) {
+                                    winning_hand.escape_rate_6months = Some(value);
+                                }
+                            }
+                            if let Some(let_escape_cell) = data_cells.get(1) {
+                                let let_escape_text = let_escape_cell.text().collect::<String>();
+                                if let Ok(Some(value)) = parse_winning_hand_value(&let_escape_text) {
+                                    winning_hand.let_escape_rate_6months = Some(value);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        // 差され/差しの組み合わせを探す (行65-66)
+        for i in start_index..rows.len().min(start_index + 10) {
+            if let Some(row) = rows.get(i) {
+                let row_text = row.text().collect::<String>();
+                if row_text.contains("差され") && row_text.contains("差し") {
+                    // 次の行に差され率と各号艇の差し率のデータがある
+                    if let Some(data_row) = rows.get(i + 1) {
+                        let data_cells: Vec<_> = data_row.select(&cell_selector).collect();
+                        if data_cells.len() >= 2 {
+                            // 1つ目のセルが差され率、2つ目のセルが2号艇の差し率
+                            if let Some(pierced_cell) = data_cells.get(0) {
+                                let pierced_text = pierced_cell.text().collect::<String>();
+                                if let Ok(Some(value)) = parse_winning_hand_value(&pierced_text) {
+                                    winning_hand.pierced_rate_6months = Some(value);
+                                }
+                            }
+                            if let Some(pierce_cell) = data_cells.get(1) {
+                                let pierce_text = pierce_cell.text().collect::<String>();
+                                if let Ok(Some(value)) = parse_winning_hand_value(&pierce_text) {
+                                    winning_hand.pierce_rate_6months = Some(value);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        // 捲られ/捲りの組み合わせを探す (行67-69、空行をスキップ)
+        for i in start_index..rows.len().min(start_index + 15) {
+            if let Some(row) = rows.get(i) {
+                let row_text = row.text().collect::<String>();
+                if row_text.contains("捲られ") && row_text.contains("捲り") {
+                    // 次の行が空行で、その次の行に捲られ率と捲り率のデータがある
+                    if let Some(data_row) = rows.get(i + 2) { // 空行をスキップして2行後
+                        let data_cells: Vec<_> = data_row.select(&cell_selector).collect();
+                        if data_cells.len() >= 2 {
+                            // 1つ目のセルが捲られ率、2つ目のセルが捲り率
+                            if let Some(overtaken_cell) = data_cells.get(0) {
+                                let overtaken_text = overtaken_cell.text().collect::<String>();
+                                if let Ok(Some(value)) = parse_winning_hand_value(&overtaken_text) {
+                                    winning_hand.overtake_rate_6months = Some(value);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(winning_hand)
+}
+
+
+fn parse_winning_hand_value(text: &str) -> Result<Option<f64>, Box<dyn std::error::Error>> {
+    let cleaned_text = text.trim();
+    
+    // "-" の場合はデータなし
+    if cleaned_text == "-" || cleaned_text.is_empty() {
+        return Ok(None);
+    }
+
+    // パーセンテージの部分を抽出
+    if let Some(percent_pos) = cleaned_text.find('%') {
+        let percent_str = &cleaned_text[..percent_pos];
+        match percent_str.parse::<f64>() {
+            Ok(value) => Ok(Some(value / 100.0)),
+            Err(_) => Ok(None),
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 fn from_percent_string_to_float(percent: &str) -> Result<f64, Box<dyn std::error::Error>> {
     let value = percent.trim_end_matches('%').parse::<f64>()?;
     Ok(value / 100.0)
@@ -929,6 +1100,14 @@ mod tests {
                 if let Some(v) = race_data.st_data.st_analysis.break_out_rate { println!("  抜出率: {:.1}%", v * 100.0); }
                 if let Some(v) = race_data.st_data.st_analysis.late_start_rate { println!("  出遅率: {:.1}%", v * 100.0); }
 
+                // 決まり手データの表示
+                println!("\n=== 決まり手データ（直近6ヶ月） ===");
+                if let Some(v) = race_data.winning_hand.escape_rate_6months { println!("逃げ率: {:.1}%", v * 100.0); }
+                if let Some(v) = race_data.winning_hand.let_escape_rate_6months { println!("逃し率: {:.1}%", v * 100.0); }
+                if let Some(v) = race_data.winning_hand.pierced_rate_6months { println!("差され率: {:.1}%", v * 100.0); }
+                if let Some(v) = race_data.winning_hand.pierce_rate_6months { println!("差し率: {:.1}%", v * 100.0); }
+                if let Some(v) = race_data.winning_hand.overtake_rate_6months { println!("捲り率: {:.1}%", v * 100.0); }
+
                 // 期待値との比較（20250705データ基準）
                 println!("\n=== 期待値との比較 ===");
                 println!("逃げ率（1年間）期待値: 31.0%, 実際値: {:.1}%", race_data.escape_last_year * 100.0);
@@ -974,6 +1153,20 @@ mod tests {
                     "支部が期待値と異なります: 期待群馬, 実際{}", race_data.player_basic_info.support_group);
                 assert_eq!(race_data.player_basic_info.gender, "男性", 
                     "性別が期待値と異なります: 期待男性, 実際{}", race_data.player_basic_info.gender);
+
+                // 決まり手データのアサーション（20250705データ基準）
+                if let Some(escape_rate) = race_data.winning_hand.escape_rate_6months {
+                    assert!((escape_rate * 100.0 - 18.8).abs() < 0.1, 
+                        "決まり手・逃げ率（6ヶ月）が期待値と異なります: 期待18.8%, 実際{:.1}%", escape_rate * 100.0);
+                }
+                if let Some(let_escape_rate) = race_data.winning_hand.let_escape_rate_6months {
+                    assert!((let_escape_rate * 100.0 - 64.0).abs() < 0.1, 
+                        "決まり手・逃し率（6ヶ月）が期待値と異なります: 期待64.0%, 実際{:.1}%", let_escape_rate * 100.0);
+                }
+                if let Some(pierced_rate) = race_data.winning_hand.pierced_rate_6months {
+                    assert!((pierced_rate * 100.0 - 25.0).abs() < 0.1, 
+                        "決まり手・差され率（6ヶ月）が期待値と異なります: 期待25.0%, 実際{:.1}%", pierced_rate * 100.0);
+                }
             }
             Err(e) => {
                 panic!("テストでエラーが発生しました: {:?}", e);

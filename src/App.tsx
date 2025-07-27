@@ -60,6 +60,14 @@ interface STRelatedData {
   st_analysis: STAnalysisData;
 }
 
+interface WinningHandData {
+  escape_rate_6months?: number;
+  let_escape_rate_6months?: number;
+  pierced_rate_6months?: number;
+  pierce_rate_6months?: number;
+  overtake_rate_6months?: number;
+}
+
 interface RaceData {
   escape_last_year: number;
   escape_last_half_year: number;
@@ -73,6 +81,7 @@ interface RaceData {
   player_basic_info: PlayerBasicInfo;
   detailed_performance: DetailedPerformanceData;
   st_data: STRelatedData;
+  winning_hand: WinningHandData;
 }
 
 function App() {
@@ -449,6 +458,52 @@ function App() {
                       {raceData.st_data.st_analysis.late_start_rate !== undefined && (
                         <div className="st-item">
                           <span>出遅率:</span> {(raceData.st_data.st_analysis.late_start_rate * 100).toFixed(1)}%
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 決まり手データ */}
+              <div className="winning-hand-section">
+                <h2>決まり手データ（直近6ヶ月）</h2>
+                
+                <div className="winning-hand-grid">
+                  {/* 1号艇の決まり手 */}
+                  <div className="winning-hand-card">
+                    <h3>1号艇の決まり手</h3>
+                    <div className="winning-hand-data">
+                      {raceData.winning_hand.escape_rate_6months !== undefined && (
+                        <div className="winning-hand-item">
+                          <span>逃げ率:</span> {(raceData.winning_hand.escape_rate_6months * 100).toFixed(1)}%
+                        </div>
+                      )}
+                      {raceData.winning_hand.pierced_rate_6months !== undefined && (
+                        <div className="winning-hand-item">
+                          <span>差され率:</span> {(raceData.winning_hand.pierced_rate_6months * 100).toFixed(1)}%
+                        </div>
+                      )}
+                      {raceData.winning_hand.overtake_rate_6months !== undefined && (
+                        <div className="winning-hand-item">
+                          <span>捲られ率:</span> {(raceData.winning_hand.overtake_rate_6months * 100).toFixed(1)}%
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2号艇以降の決まり手 */}
+                  <div className="winning-hand-card">
+                    <h3>2号艇以降の決まり手</h3>
+                    <div className="winning-hand-data">
+                      {raceData.winning_hand.pierce_rate_6months !== undefined && (
+                        <div className="winning-hand-item">
+                          <span>2号艇差し率:</span> {(raceData.winning_hand.pierce_rate_6months * 100).toFixed(1)}%
+                        </div>
+                      )}
+                      {raceData.winning_hand.let_escape_rate_6months !== undefined && (
+                        <div className="winning-hand-item">
+                          <span>逃し率:</span> {(raceData.winning_hand.let_escape_rate_6months * 100).toFixed(1)}%
                         </div>
                       )}
                     </div>
