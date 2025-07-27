@@ -68,6 +68,21 @@ interface WinningHandData {
   overtake_rate_6months?: number;
 }
 
+interface OddsCombination {
+  first: number;
+  second: number;
+  third?: number;
+  odds: number;
+  is_combined: boolean;
+}
+
+type BettingType = "Trifecta" | "Tricast" | "Exacta" | "Quinella" | "QuinellaPlace" | "WinPlace";
+
+interface OddsData {
+  betting_type: BettingType;
+  combinations: OddsCombination[];
+}
+
 interface RaceData {
   escape_last_year: number;
   escape_last_half_year: number;
@@ -86,8 +101,10 @@ interface RaceData {
 
 function App() {
   const [raceData, setRaceData] = useState<RaceData | null>(null);
+  const [oddsData, setOddsData] = useState<OddsData | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oddsLoading, setOddsLoading] = useState(false);
   const [date, setDate] = useState("");
   const [raceNumber, setRaceNumber] = useState("1");
   const [placeNumber, setPlaceNumber] = useState("1");
@@ -103,6 +120,23 @@ function App() {
       setError(err as string);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchOddsData() {
+    setOddsLoading(true);
+    setError("");
+    setOddsData(null);
+    try {
+      const result = await invoke<OddsData>("get_parsed_odds_info", { date, raceNumber, placeNumber });
+      console.log("オッズデータ取得成功:", result);
+      setOddsData(result);
+      alert(`オッズデータ取得成功: ${result.combinations.length}個の組み合わせ`);
+    } catch (err) {
+      console.error("オッズデータ取得エラー:", err);
+      setError(err as string);
+    } finally {
+      setOddsLoading(false);
     }
   }
 
@@ -163,6 +197,15 @@ function App() {
             
             <button type="submit" disabled={loading || !date}>
               {loading ? "取得中..." : "データ取得"}
+            </button>
+            
+            <button 
+              type="button" 
+              onClick={fetchOddsData}
+              disabled={oddsLoading || !date}
+              className="odds-button"
+            >
+              {oddsLoading ? "オッズ取得中..." : "オッズ取得"}
             </button>
           </form>
         </div>
@@ -510,10 +553,91 @@ function App() {
                   </div>
                 </div>
               </div>
+
             </div>
           )}
 
-          {!raceData && !error && !loading && (
+          {/* オッズデータ（独立表示） */}
+          {oddsData && (
+            <div className="odds-section">
+              <h2>オッズデータ（{oddsData.betting_type === "Trifecta" ? "三連単" : oddsData.betting_type}）</h2>
+              
+              <div className="odds-summary">
+                <p>総組み合わせ数: {oddsData.combinations.length}通り</p>
+              </div>
+              
+              <div className="odds-grid">
+                {/* 人気上位10組み合わせ（オッズが低い順） */}
+                <div className="odds-card">
+                  <h3>人気上位10組み合わせ</h3>
+                  <div className="odds-list">
+                    {oddsData.combinations
+                      .sort((a, b) => a.odds - b.odds)
+                      .slice(0, 10)
+                      .map((combo, index) => (
+                        <div key={index} className="odds-item">
+                          <span className="combination">
+                            {combo.third ? 
+                              `${combo.first}-${combo.second}-${combo.third}` : 
+                              `${combo.first}-${combo.second}`
+                            }
+                          </span>
+                          <span className="odds-value">{combo.odds}</span>
+                          {combo.is_combined && <span className="combined-badge">合成</span>}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* 穴馬上位10組み合わせ（オッズが高い順） */}
+                <div className="odds-card">
+                  <h3>穴馬上位10組み合わせ</h3>
+                  <div className="odds-list">
+                    {oddsData.combinations
+                      .sort((a, b) => b.odds - a.odds)
+                      .slice(0, 10)
+                      .map((combo, index) => (
+                        <div key={index} className="odds-item">
+                          <span className="combination">
+                            {combo.third ? 
+                              `${combo.first}-${combo.second}-${combo.third}` : 
+                              `${combo.first}-${combo.second}`
+                            }
+                          </span>
+                          <span className="odds-value">{combo.odds}</span>
+                          {combo.is_combined && <span className="combined-badge">合成</span>}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* 1号艇関連組み合わせ */}
+                <div className="odds-card">
+                  <h3>1号艇関連組み合わせ</h3>
+                  <div className="odds-list">
+                    {oddsData.combinations
+                      .filter(combo => combo.first === 1)
+                      .sort((a, b) => a.odds - b.odds)
+                      .slice(0, 10)
+                      .map((combo, index) => (
+                        <div key={index} className="odds-item">
+                          <span className="combination">
+                            {combo.third ? 
+                              `${combo.first}-${combo.second}-${combo.third}` : 
+                              `${combo.first}-${combo.second}`
+                            }
+                          </span>
+                          <span className="odds-value">{combo.odds}</span>
+                          {combo.is_combined && <span className="combined-badge">合成</span>}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!raceData && !error && !loading && !oddsData && !oddsLoading && (
             <div className="placeholder">
               <p>左のフォームからレース情報を取得してください</p>
             </div>

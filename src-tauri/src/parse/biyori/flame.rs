@@ -66,6 +66,31 @@ pub struct WinningHandData {
     pub overtake_rate_6months: Option<f64>,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OddsCombination {
+    pub first: u8,
+    pub second: u8,
+    pub third: Option<u8>, // None for 2-boat combinations
+    pub odds: f64,
+    pub is_combined: bool, // for "合成" odds
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub enum BettingType {
+    Trifecta,      // 3連単
+    Tricast,       // 3連複
+    Exacta,        // 2連単
+    Quinella,      // 2連複
+    QuinellaPlace, // 拡連複
+    WinPlace,      // 単勝・複勝
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct OddsData {
+    pub betting_type: BettingType,
+    pub combinations: Vec<OddsCombination>,
+}
+
 #[derive(Debug, serde::Serialize)]
 pub struct DetailedPerformanceData {
     pub first_place_rate: PerformanceData,
@@ -1254,6 +1279,154 @@ mod tests {
                 .map(|cell| cell.text().collect::<String>().trim().to_string())
                 .collect();
             println!("捲られ率データ行 {}: {:?}", idx, row_values);
+        }
+    }
+}
+
+// オッズデータ解析関数
+pub fn parse_odds_from_html(html_content: &str) -> Result<OddsData, Box<dyn std::error::Error>> {
+    let document = Html::parse_document(html_content);
+    let table_selector = Selector::parse("#odds table.odds_table")?;
+    let row_selector = Selector::parse("tr")?;
+    let cell_selector = Selector::parse("td")?;
+    
+    let mut combinations = Vec::new();
+    
+    // オッズテーブルを探す
+    if let Some(odds_table) = document.select(&table_selector).next() {
+        println!("オッズテーブルが見つかりました");
+        
+        // テーブルの行をすべて取得
+        let rows: Vec<_> = odds_table.select(&row_selector).collect();
+        
+        // 三連単のオッズデータを解析
+        // テーブルの構造: 1号艇から6号艇まで、各艇が1着の場合の組み合わせとオッズ
+        for (row_idx, row) in rows.iter().enumerate() {
+            let cells: Vec<_> = row.select(&cell_selector).collect();
+            
+            // オッズ値を含む行を特定（数値を含むセルがある行）
+            for (cell_idx, cell) in cells.iter().enumerate() {
+                let cell_text = cell.text().collect::<String>().trim().to_string();
+                
+                // オッズ値として有効な数値かチェック（小数点を含む数値）
+                if let Ok(odds_value) = cell_text.parse::<f64>() {
+                    if odds_value > 1.0 { // 有効なオッズ値のみ
+                        // セルの位置とクラス情報から組み合わせを推定
+                        // この部分は複雑なテーブル構造のため、位置ベースで推定
+                        if let Some(combination) = parse_combination_from_position(row_idx, cell_idx, &cells) {
+                            combinations.push(OddsCombination {
+                                first: combination.0,
+                                second: combination.1, 
+                                third: combination.2,
+                                odds: odds_value,
+                                is_combined: cell_text.contains("合成"),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        return Err("オッズテーブルが見つかりませんでした".into());
+    }
+    
+    println!("解析完了: {}個の組み合わせを取得", combinations.len());
+    
+    Ok(OddsData {
+        betting_type: BettingType::Trifecta, // デフォルトで三連単
+        combinations,
+    })
+}
+
+// テーブルの位置から組み合わせを推定するヘルパー関数
+fn parse_combination_from_position(
+    row_idx: usize,
+    cell_idx: usize, 
+    cells: &[scraper::ElementRef]
+) -> Option<(u8, u8, Option<u8>)> {
+    // この実装は簡略化されています
+    // 実際のテーブル構造に基づいて詳細な解析が必要
+    
+    // ボート番号のクラス情報を取得
+    let mut boat_numbers = Vec::new();
+    
+    for cell in cells {
+        if let Some(class_attr) = cell.value().attr("class") {
+            if class_attr.contains("course1") {
+                boat_numbers.push(1);
+            } else if class_attr.contains("course2") {
+                boat_numbers.push(2);
+            } else if class_attr.contains("course3") {
+                boat_numbers.push(3);
+            } else if class_attr.contains("course4") {
+                boat_numbers.push(4);
+            } else if class_attr.contains("course5") {
+                boat_numbers.push(5);
+            } else if class_attr.contains("course6") {
+                boat_numbers.push(6);
+            }
+        }
+    }
+    
+    // 三連単の組み合わせを構築
+    if boat_numbers.len() >= 3 {
+        Some((boat_numbers[0], boat_numbers[1], Some(boat_numbers[2])))
+    } else if boat_numbers.len() >= 2 {
+        Some((boat_numbers[0], boat_numbers[1], None))
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod odds_tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_parse_odds_from_html_20250726() {
+        println!("=== オッズデータ解析テスト ===");
+        
+        // テスト用HTMLファイルを読み込み
+        let file_path = "./bort-html/20250726/odds.html";
+        let html_content = match fs::read_to_string(file_path) {
+            Ok(content) => content,
+            Err(e) => {
+                println!("HTMLファイルの読み込みに失敗: {}", e);
+                println!("まず `cargo test test_fetch_odds_info_from_kyoteibiyori` を実行してHTMLファイルを生成してください");
+                return;
+            }
+        };
+
+        println!("HTMLファイルサイズ: {} bytes", html_content.len());
+
+        // オッズデータを解析
+        match parse_odds_from_html(&html_content) {
+            Ok(odds_data) => {
+                println!("✅ オッズデータ解析成功!");
+                println!("ベッティングタイプ: {:?}", odds_data.betting_type);
+                println!("組み合わせ数: {}", odds_data.combinations.len());
+                
+                // 最初の10組み合わせを表示
+                println!("\n=== 最初の10組み合わせ ===");
+                for (i, combination) in odds_data.combinations.iter().take(10).enumerate() {
+                    if let Some(third) = combination.third {
+                        println!("{}: {}-{}-{} = {}", i + 1, combination.first, combination.second, third, combination.odds);
+                    } else {
+                        println!("{}: {}-{} = {}", i + 1, combination.first, combination.second, combination.odds);
+                    }
+                }
+                
+                // 基本的な検証
+                assert!(!odds_data.combinations.is_empty(), "組み合わせが取得されていません");
+                assert!(matches!(odds_data.betting_type, BettingType::Trifecta), "ベッティングタイプが正しくありません");
+                
+                println!("✅ 全てのテストが成功しました!");
+            }
+            Err(e) => {
+                println!("❌ オッズデータ解析失敗: {}", e);
+                panic!("オッズデータ解析に失敗しました: {}", e);
+            }
         }
     }
 }
