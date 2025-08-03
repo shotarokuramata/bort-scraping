@@ -87,11 +87,39 @@ fn get_parsed_odds_info(date: &str, race_number: &str, place_number: &str) -> Re
     }
 }
 
+#[tauri::command]
+fn get_win_place_odds_info(date: &str, race_number: &str, place_number: &str) -> Result<parse::biyori::flame::OddsData, String> {
+    let date_str = date.replace("-", "");
+
+    let race_no = match race_number.parse::<u32>() {
+        Ok(n) => n,
+        Err(_) => return Err(format!("Invalid race number: {}", race_number)),
+    };
+    let place_no = match place_number.parse::<u32>() {
+        Ok(n) => n,
+        Err(_) => return Err(format!("Invalid place number: {}", place_number)),
+    };
+    
+    // 単勝・複勝HTMLを取得
+    let html_result = headress::fetch_odds_info_from_kyoteibiyori(race_no, place_no, &date_str);
+    let html_content = match html_result {
+        Ok(content) => content,
+        Err(err) => return Err(format!("単勝・複勝HTML取得エラー: {}", err)),
+    };
+    
+    // 単勝・複勝オッズデータを解析
+    let odds_result = parse::biyori::flame::parse_win_place_odds_from_html(&html_content);
+    match odds_result {
+        Ok(odds_data) => Ok(odds_data),
+        Err(err) => Err(format!("単勝・複勝オッズ解析エラー: {}", err)),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_biyori_info, get_odds_info, get_parsed_odds_info])
+        .invoke_handler(tauri::generate_handler![greet, get_biyori_info, get_odds_info, get_parsed_odds_info, get_win_place_odds_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

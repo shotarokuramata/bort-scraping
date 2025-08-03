@@ -74,6 +74,7 @@ interface OddsCombination {
   third?: number;
   odds: number;
   is_combined: boolean;
+  range_text?: string; // 複勝オッズの場合、元の範囲文字列（例："2.4-3.5"）
 }
 
 type BettingType = "Trifecta" | "Tricast" | "Exacta" | "Quinella" | "QuinellaPlace" | "WinPlace";
@@ -102,9 +103,11 @@ interface RaceData {
 function App() {
   const [raceData, setRaceData] = useState<RaceData | null>(null);
   const [oddsData, setOddsData] = useState<OddsData | null>(null);
+  const [winPlaceOddsData, setWinPlaceOddsData] = useState<OddsData | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [oddsLoading, setOddsLoading] = useState(false);
+  const [winPlaceOddsLoading, setWinPlaceOddsLoading] = useState(false);
   const [date, setDate] = useState("");
   const [raceNumber, setRaceNumber] = useState("1");
   const [placeNumber, setPlaceNumber] = useState("1");
@@ -137,6 +140,23 @@ function App() {
       setError(err as string);
     } finally {
       setOddsLoading(false);
+    }
+  }
+
+  async function fetchWinPlaceOddsData() {
+    setWinPlaceOddsLoading(true);
+    setError("");
+    setWinPlaceOddsData(null);
+    try {
+      const result = await invoke<OddsData>("get_win_place_odds_info", { date, raceNumber, placeNumber });
+      console.log("単勝・複勝オッズデータ取得成功:", result);
+      setWinPlaceOddsData(result);
+      alert(`単勝・複勝オッズデータ取得成功: ${result.combinations.length}個のオッズ`);
+    } catch (err) {
+      console.error("単勝・複勝オッズデータ取得エラー:", err);
+      setError(err as string);
+    } finally {
+      setWinPlaceOddsLoading(false);
     }
   }
 
@@ -205,7 +225,16 @@ function App() {
               disabled={oddsLoading || !date}
               className="odds-button"
             >
-              {oddsLoading ? "オッズ取得中..." : "オッズ取得"}
+              {oddsLoading ? "三連単取得中..." : "三連単オッズ取得"}
+            </button>
+            
+            <button 
+              type="button" 
+              onClick={fetchWinPlaceOddsData}
+              disabled={winPlaceOddsLoading || !date}
+              className="win-place-odds-button"
+            >
+              {winPlaceOddsLoading ? "単勝・複勝取得中..." : "単勝・複勝オッズ取得"}
             </button>
           </form>
         </div>
@@ -637,7 +666,52 @@ function App() {
             </div>
           )}
 
-          {!raceData && !error && !loading && !oddsData && !oddsLoading && (
+          {/* 単勝・複勝オッズデータ（独立表示） */}
+          {winPlaceOddsData && (
+            <div className="win-place-odds-section">
+              <h2>単勝・複勝オッズデータ</h2>
+              
+              <div className="win-place-odds-summary">
+                <p>総オッズ数: {winPlaceOddsData.combinations.length}個</p>
+              </div>
+              
+              <div className="win-place-odds-grid">
+                {/* 単勝オッズ */}
+                <div className="win-place-odds-card">
+                  <h3>単勝オッズ</h3>
+                  <div className="win-place-odds-list">
+                    {winPlaceOddsData.combinations
+                      .filter(combo => combo.second === 0) // 単勝オッズ
+                      .sort((a, b) => a.first - b.first) // 艇番順でソート
+                      .map((combo, index) => (
+                        <div key={index} className="win-place-odds-item">
+                          <span className="boat-number">{combo.first}号艇</span>
+                          <span className="odds-value">{combo.odds.toFixed(1)}倍</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* 複勝オッズ */}
+                <div className="win-place-odds-card">
+                  <h3>複勝オッズ</h3>
+                  <div className="win-place-odds-list">
+                    {winPlaceOddsData.combinations
+                      .filter(combo => combo.second === 1) // 複勝オッズ
+                      .sort((a, b) => a.first - b.first) // 艇番順でソート
+                      .map((combo, index) => (
+                        <div key={index} className="win-place-odds-item">
+                          <span className="boat-number">{combo.first}号艇</span>
+                          <span className="odds-value">{combo.range_text || combo.odds.toFixed(1)}倍</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!raceData && !error && !loading && !oddsData && !oddsLoading && !winPlaceOddsData && !winPlaceOddsLoading && (
             <div className="placeholder">
               <p>左のフォームからレース情報を取得してください</p>
             </div>

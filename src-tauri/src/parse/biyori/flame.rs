@@ -73,9 +73,10 @@ pub struct OddsCombination {
     pub third: Option<u8>, // None for 2-boat combinations
     pub odds: f64,
     pub is_combined: bool, // for "合成" odds
+    pub range_text: Option<String>, // 複勝オッズの場合、元の範囲文字列（例："2.4-3.5"）
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
 pub enum BettingType {
     Trifecta,      // 3連単
     Tricast,       // 3連複
@@ -1284,6 +1285,84 @@ mod tests {
 }
 
 // オッズデータ解析関数
+// 単勝・複勝オッズを解析する関数
+pub fn parse_win_place_odds_from_html(html_content: &str) -> Result<OddsData, Box<dyn std::error::Error>> {
+    let document = Html::parse_document(html_content);
+    let table_selector = Selector::parse("table.odds_table")?;
+    let row_selector = Selector::parse("tr")?;
+    let cell_selector = Selector::parse("td")?;
+    
+    let mut combinations = Vec::new();
+    
+    // オッズテーブルを探す
+    if let Some(odds_table) = document.select(&table_selector).next() {
+        println!("単勝・複勝オッズテーブルが見つかりました");
+        
+        let rows: Vec<_> = odds_table.select(&row_selector).collect();
+        
+        // ヘッダー行をスキップ（class="table_top_title"）
+        for row in rows.iter() {
+            let cells: Vec<_> = row.select(&cell_selector).collect();
+            
+            // ヘッダー行はスキップ
+            if cells.iter().any(|cell| cell.value().attr("class") == Some("table_top_title")) {
+                continue;
+            }
+            
+            // 各行の構造: [コース番号, 選手情報, 単勝オッズ, 複勝オッズ]
+            if cells.len() >= 4 {
+                // コース番号を取得（class="course1"などから）
+                let course_cell = &cells[0];
+                let course_text = course_cell.text().collect::<String>().trim().to_string();
+                
+                if let Ok(course_number) = course_text.parse::<u8>() {
+                    // 単勝オッズ（3列目）
+                    let win_odds_text = cells[2].text().collect::<String>().trim().to_string();
+                    if let Ok(win_odds) = win_odds_text.parse::<f64>() {
+                        combinations.push(OddsCombination {
+                            first: course_number,
+                            second: 0, // 単勝では使用しない
+                            third: None,
+                            odds: win_odds,
+                            is_combined: false,
+                            range_text: None, // 単勝では使用しない
+                        });
+                    }
+                    
+                    // 複勝オッズ（4列目、"1.5-3.3"形式）
+                    let place_odds_text = cells[3].text().collect::<String>().trim().to_string();
+                    if place_odds_text.contains("-") {
+                        let parts: Vec<&str> = place_odds_text.split("-").collect();
+                        if parts.len() == 2 {
+                            if let (Ok(min_odds), Ok(max_odds)) = (parts[0].parse::<f64>(), parts[1].parse::<f64>()) {
+                                // 複勝オッズは範囲値をそのまま保存、表示用に平均値も計算
+                                let avg_odds = (min_odds + max_odds) / 2.0;
+                                combinations.push(OddsCombination {
+                                    first: course_number,
+                                    second: 1, // 複勝を示すフラグ
+                                    third: None,
+                                    odds: avg_odds, // 内部計算用の平均値
+                                    is_combined: true, // 複勝は範囲値なのでtrueにする
+                                    range_text: Some(place_odds_text.clone()), // 表示用の元の範囲文字列
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        return Err("単勝・複勝オッズテーブルが見つかりませんでした".into());
+    }
+    
+    println!("単勝・複勝解析完了: {}個のオッズを取得", combinations.len());
+    
+    Ok(OddsData {
+        betting_type: BettingType::WinPlace,
+        combinations,
+    })
+}
+
 pub fn parse_odds_from_html(html_content: &str) -> Result<OddsData, Box<dyn std::error::Error>> {
     let document = Html::parse_document(html_content);
     let table_selector = Selector::parse("#odds table.odds_table")?;
@@ -1320,6 +1399,7 @@ pub fn parse_odds_from_html(html_content: &str) -> Result<OddsData, Box<dyn std:
                                 third: combination.2,
                                 odds: odds_value,
                                 is_combined: cell_text.contains("合成"),
+                                range_text: None, // 三連単では使用しない
                             });
                         }
                     }
@@ -1382,6 +1462,57 @@ fn parse_combination_from_position(
 mod odds_tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn test_parse_win_place_odds_from_html_20250726() {
+        println!("=== 単勝・複勝オッズデータ解析テスト ===");
+        
+        // テスト用HTMLファイルを読み込み
+        let file_path = "./bort-html/20250726/win_place_odds.html";
+        let html_content = match fs::read_to_string(file_path) {
+            Ok(content) => content,
+            Err(e) => {
+                println!("HTMLファイルの読み込みに失敗: {}", e);
+                println!("まず `cargo test test_fetch_win_place_odds_from_kyoteibiyori` を実行してHTMLファイルを生成してください");
+                return;
+            }
+        };
+        
+        println!("HTMLファイルサイズ: {} bytes", html_content.len());
+        
+        // 単勝・複勝オッズデータを解析
+        match parse_win_place_odds_from_html(&html_content) {
+            Ok(odds_data) => {
+                println!("✅ 単勝・複勝オッズ解析成功！");
+                println!("ベッティングタイプ: {:?}", odds_data.betting_type);
+                println!("総オッズ数: {}", odds_data.combinations.len());
+                
+                // 各艇のオッズを表示
+                for combination in &odds_data.combinations {
+                    if combination.second == 0 {
+                        println!("{}号艇 単勝: {:.1}倍", combination.first, combination.odds);
+                    } else {
+                        if let Some(range) = &combination.range_text {
+                            println!("{}号艇 複勝: {}倍", combination.first, range);
+                        } else {
+                            println!("{}号艇 複勝: {:.1}倍（平均）", combination.first, combination.odds);
+                        }
+                    }
+                }
+                
+                // 基本的な検証
+                assert_eq!(odds_data.betting_type, BettingType::WinPlace);
+                assert!(odds_data.combinations.len() > 0, "オッズデータが空です");
+                assert!(odds_data.combinations.len() <= 12, "オッズ数が異常です（6艇×2種類=最大12個）");
+                
+                println!("✅ 単勝・複勝オッズ解析テスト完了");
+            }
+            Err(e) => {
+                eprintln!("❌ 単勝・複勝オッズ解析エラー: {}", e);
+                panic!("単勝・複勝オッズ解析に失敗: {}", e);
+            }
+        }
+    }
 
     #[test]
     fn test_parse_odds_from_html_20250726() {
