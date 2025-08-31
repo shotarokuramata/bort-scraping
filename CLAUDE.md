@@ -18,8 +18,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm tauri build` - アプリケーションのビルド
 
 ### テスト
-- `cargo test` - Rustのテストを実行（`src-tauri/`ディレクトリ内で実行）
-- `cargo test --test test_name` - 特定のテストのみ実行
+**基本コマンド:**
+- `cargo test` - 全テスト実行（時間がかかる）
+- `cargo test --lib` - ライブラリテストのみ実行
+
+**高速テスト（開発時推奨、~1秒）:**
+- `cargo test tests::test_get_biyori_info_invalid` - パラメータ検証テスト（瞬時）
+- `cargo test tests::test_get_win_place_odds_info_invalid` - オッズ検証テスト（瞬時）
+- `cargo test tests::test_get_bulk_race_data_invalid` - 一括取得エラーテスト（瞬時）
+- `cargo test parse::biyori::flame::tests` - HTMLパース機能テスト（0.1秒）
+
+**実データテスト（5~30秒、スクレイピング実行）:**
+- `cargo test tests::test_get_biyori_info_valid` - 実データ取得テスト（~10秒）
+- `cargo test tests::test_get_win_place_odds_info_valid` - 実オッズ取得テスト（~8秒）
+- `cargo test tests::test_get_bulk_race_data_valid` - 実一括取得テスト（~15秒）
+- `cargo test headress::tests` - スクレイピング実行テスト（~15秒）
+
+**カテゴリ別テスト:**
+- `cargo test tests::` - Tauriコマンド関数テスト
+- `cargo test parse::` - HTMLパース機能テスト
+- `cargo test headress::` - スクレイピング機能テスト
+
+**推奨ワークフロー:**
+```bash
+# 1. 開発中の高速チェック（~1秒）
+cargo test tests::test_get_biyori_info_invalid
+
+# 2. リリース前の完全テスト（~1分）
+cargo test --lib
+
+# 3. HTML/スクレイピング確認（~10秒）
+cargo test headress::tests::test_fetch_win_place_odds_from_kyoteibiyori -- --nocapture
+```
 
 ## アーキテクチャ
 
@@ -62,6 +92,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - HTMLファイルは`bort-html/`ディレクトリに日付別で保存
 - 競艇場の番号は`src/information.ts`で管理
 - テストはHTMLファイルに依存するため、事前にサンプルデータが必要
+
+## 実装方針
+
+### 三連単オッズについて
+**三連単オッズ機能は実装不要です。**
+- データが不安定で正確性に課題がある
+- 単勝・複勝オッズのみに集中する方針
+- 既存の三連単関連コードは削除済み
+- 今後も三連単機能の追加・復活は行わない
 
 ## ファイル構成の特徴
 

@@ -100,17 +100,30 @@ interface RaceData {
   winning_hand: WinningHandData;
 }
 
+interface BulkRaceData {
+  date: string;
+  place_number: number;
+  race_number: number;
+  race_data?: RaceData;
+  win_place_odds_data?: OddsData;
+  error?: string;
+}
+
 function App() {
   const [raceData, setRaceData] = useState<RaceData | null>(null);
-  const [oddsData, setOddsData] = useState<OddsData | null>(null);
   const [winPlaceOddsData, setWinPlaceOddsData] = useState<OddsData | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [oddsLoading, setOddsLoading] = useState(false);
   const [winPlaceOddsLoading, setWinPlaceOddsLoading] = useState(false);
+  const [bulkData, setBulkData] = useState<BulkRaceData[]>([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [date, setDate] = useState("");
   const [raceNumber, setRaceNumber] = useState("1");
   const [placeNumber, setPlaceNumber] = useState("1");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedPlaces, setSelectedPlaces] = useState<number[]>([1]);
+  const [selectedRaces, setSelectedRaces] = useState<number[]>([1]);
 
   async function fetchRaceData() {
     setLoading(true);
@@ -126,22 +139,6 @@ function App() {
     }
   }
 
-  async function fetchOddsData() {
-    setOddsLoading(true);
-    setError("");
-    setOddsData(null);
-    try {
-      const result = await invoke<OddsData>("get_parsed_odds_info", { date, raceNumber, placeNumber });
-      console.log("オッズデータ取得成功:", result);
-      setOddsData(result);
-      alert(`オッズデータ取得成功: ${result.combinations.length}個の組み合わせ`);
-    } catch (err) {
-      console.error("オッズデータ取得エラー:", err);
-      setError(err as string);
-    } finally {
-      setOddsLoading(false);
-    }
-  }
 
   async function fetchWinPlaceOddsData() {
     setWinPlaceOddsLoading(true);
@@ -157,6 +154,46 @@ function App() {
       setError(err as string);
     } finally {
       setWinPlaceOddsLoading(false);
+    }
+  }
+
+  async function fetchBulkData() {
+    if (!startDate || !endDate) {
+      setError("開始日と終了日を選択してください");
+      return;
+    }
+
+    if (selectedPlaces.length === 0) {
+      setError("少なくとも1つの競艇場を選択してください");
+      return;
+    }
+
+    if (selectedRaces.length === 0) {
+      setError("少なくとも1つのレース番号を選択してください");
+      return;
+    }
+
+    setBulkLoading(true);
+    setError("");
+    setBulkData([]);
+    
+    try {
+      const result = await invoke<BulkRaceData[]>("get_bulk_race_data", {
+        startDate,
+        endDate,
+        placeNumbers: selectedPlaces,
+        raceNumbers: selectedRaces,
+      });
+      
+      setBulkData(result);
+      const successCount = result.filter(item => !item.error).length;
+      const errorCount = result.filter(item => item.error).length;
+      alert(`一括取得完了: 成功${successCount}件, エラー${errorCount}件`);
+    } catch (err) {
+      console.error("一括取得エラー:", err);
+      setError(err as string);
+    } finally {
+      setBulkLoading(false);
     }
   }
 
@@ -221,20 +258,93 @@ function App() {
             
             <button 
               type="button" 
-              onClick={fetchOddsData}
-              disabled={oddsLoading || !date}
-              className="odds-button"
-            >
-              {oddsLoading ? "三連単取得中..." : "三連単オッズ取得"}
-            </button>
-            
-            <button 
-              type="button" 
               onClick={fetchWinPlaceOddsData}
               disabled={winPlaceOddsLoading || !date}
               className="win-place-odds-button"
             >
               {winPlaceOddsLoading ? "単勝・複勝取得中..." : "単勝・複勝オッズ取得"}
+            </button>
+          </form>
+
+          {/* 一括取得フォーム */}
+          <form
+            className="form bulk-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              fetchBulkData();
+            }}
+          >
+            <h2>一括データ取得</h2>
+            
+            <div className="form-group">
+              <label htmlFor="startDate">開始日:</label>
+              <input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="endDate">終了日:</label>
+              <input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>競艇場を選択:</label>
+              <div className="checkbox-group">
+                {Object.entries(kyoteiPlaces).slice(0, 12).map(([key, name]) => (
+                  <label key={key} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={selectedPlaces.includes(parseInt(key))}
+                      onChange={(e) => {
+                        const placeNumber = parseInt(key);
+                        if (e.target.checked) {
+                          setSelectedPlaces([...selectedPlaces, placeNumber]);
+                        } else {
+                          setSelectedPlaces(selectedPlaces.filter(p => p !== placeNumber));
+                        }
+                      }}
+                    />
+                    {name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>レース番号を選択:</label>
+              <div className="checkbox-group">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                  <label key={num} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={selectedRaces.includes(num)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRaces([...selectedRaces, num]);
+                        } else {
+                          setSelectedRaces(selectedRaces.filter(r => r !== num));
+                        }
+                      }}
+                    />
+                    {num}R
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <button type="submit" disabled={bulkLoading || !startDate || !endDate}>
+              {bulkLoading ? "一括取得中..." : "一括取得開始"}
             </button>
           </form>
         </div>
@@ -586,85 +696,6 @@ function App() {
             </div>
           )}
 
-          {/* オッズデータ（独立表示） */}
-          {oddsData && (
-            <div className="odds-section">
-              <h2>オッズデータ（{oddsData.betting_type === "Trifecta" ? "三連単" : oddsData.betting_type}）</h2>
-              
-              <div className="odds-summary">
-                <p>総組み合わせ数: {oddsData.combinations.length}通り</p>
-              </div>
-              
-              <div className="odds-grid">
-                {/* 人気上位10組み合わせ（オッズが低い順） */}
-                <div className="odds-card">
-                  <h3>人気上位10組み合わせ</h3>
-                  <div className="odds-list">
-                    {oddsData.combinations
-                      .sort((a, b) => a.odds - b.odds)
-                      .slice(0, 10)
-                      .map((combo, index) => (
-                        <div key={index} className="odds-item">
-                          <span className="combination">
-                            {combo.third ? 
-                              `${combo.first}-${combo.second}-${combo.third}` : 
-                              `${combo.first}-${combo.second}`
-                            }
-                          </span>
-                          <span className="odds-value">{combo.odds}</span>
-                          {combo.is_combined && <span className="combined-badge">合成</span>}
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* 穴馬上位10組み合わせ（オッズが高い順） */}
-                <div className="odds-card">
-                  <h3>穴馬上位10組み合わせ</h3>
-                  <div className="odds-list">
-                    {oddsData.combinations
-                      .sort((a, b) => b.odds - a.odds)
-                      .slice(0, 10)
-                      .map((combo, index) => (
-                        <div key={index} className="odds-item">
-                          <span className="combination">
-                            {combo.third ? 
-                              `${combo.first}-${combo.second}-${combo.third}` : 
-                              `${combo.first}-${combo.second}`
-                            }
-                          </span>
-                          <span className="odds-value">{combo.odds}</span>
-                          {combo.is_combined && <span className="combined-badge">合成</span>}
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* 1号艇関連組み合わせ */}
-                <div className="odds-card">
-                  <h3>1号艇関連組み合わせ</h3>
-                  <div className="odds-list">
-                    {oddsData.combinations
-                      .filter(combo => combo.first === 1)
-                      .sort((a, b) => a.odds - b.odds)
-                      .slice(0, 10)
-                      .map((combo, index) => (
-                        <div key={index} className="odds-item">
-                          <span className="combination">
-                            {combo.third ? 
-                              `${combo.first}-${combo.second}-${combo.third}` : 
-                              `${combo.first}-${combo.second}`
-                            }
-                          </span>
-                          <span className="odds-value">{combo.odds}</span>
-                          {combo.is_combined && <span className="combined-badge">合成</span>}
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* 単勝・複勝オッズデータ（独立表示） */}
           {winPlaceOddsData && (
@@ -711,7 +742,99 @@ function App() {
             </div>
           )}
 
-          {!raceData && !error && !loading && !oddsData && !oddsLoading && !winPlaceOddsData && !winPlaceOddsLoading && (
+          {/* 一括取得結果 */}
+          {bulkData.length > 0 && (
+            <div className="bulk-results">
+              <h2>一括取得結果</h2>
+              <div className="bulk-summary">
+                <p>
+                  総数: {bulkData.length}件, 
+                  成功: {bulkData.filter(item => !item.error).length}件, 
+                  エラー: {bulkData.filter(item => item.error).length}件
+                </p>
+              </div>
+              <div className="bulk-data-list">
+                {bulkData.map((item, index) => (
+                  <div key={index} className={`bulk-data-item ${item.error ? 'error' : 'success'}`}>
+                    <div className="bulk-item-header">
+                      <span className="date">{item.date}</span>
+                      <span className="place">場所: {kyoteiPlaces[item.place_number as keyof typeof kyoteiPlaces] || item.place_number}</span>
+                      <span className="race">レース: {item.race_number}R</span>
+                    </div>
+                    {item.error ? (
+                      <div className="bulk-item-error">
+                        エラー: {item.error}
+                      </div>
+                    ) : (
+                      <div className="bulk-item-success">
+                        {/* 基本レースデータ */}
+                        {item.race_data && (
+                          <div className="bulk-race-details">
+                            <div className="bulk-race-summary">
+                              <strong>選手情報:</strong> {item.race_data.player_basic_info.name} ({item.race_data.player_basic_info.class_level}) - {item.race_data.player_basic_info.registration_number}
+                            </div>
+                            <div className="bulk-race-stats">
+                              <div className="stat-row">
+                                <span>逃げ率(半年): {(item.race_data.escape_last_half_year * 100).toFixed(1)}%</span>
+                                <span>逃げ率(1年): {(item.race_data.escape_last_year * 100).toFixed(1)}%</span>
+                              </div>
+                              <div className="stat-row">
+                                <span>逃がし率(半年): {(item.race_data.allow_escape_last_half_year * 100).toFixed(1)}%</span>
+                                <span>逃がし率(1年): {(item.race_data.allow_escape_last_year * 100).toFixed(1)}%</span>
+                              </div>
+                              <div className="stat-row">
+                                <span>差され率(半年): {(item.race_data.pierce_last_half_year * 100).toFixed(1)}%</span>
+                                <span>捲られ率(半年): {(item.race_data.overtake_last_half_year * 100).toFixed(1)}%</span>
+                              </div>
+                              <div className="stat-row">
+                                <span>直近10レース1着: {item.race_data.first_place_in_last_ten_race}回</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* 単勝・複勝データ */}
+                        {item.win_place_odds_data && (
+                          <div className="bulk-win-place-details">
+                            <div className="bulk-win-place-summary">
+                              <strong>単勝・複勝オッズ:</strong> {item.win_place_odds_data.combinations.length}パターン
+                            </div>
+                            <div className="bulk-win-place-highlights">
+                              <div className="win-place-highlight">
+                                <span>単勝最低: </span>
+                                {(() => {
+                                  const winOdds = item.win_place_odds_data.combinations.filter(c => c.second === 0);
+                                  if (winOdds.length === 0) return 'なし';
+                                  const minWin = winOdds.reduce((min, c) => c.odds < min.odds ? c : min);
+                                  return `${minWin.first}号艇 (${minWin.odds.toFixed(1)})`;
+                                })()}
+                              </div>
+                              <div className="win-place-highlight">
+                                <span>複勝最低: </span>
+                                {(() => {
+                                  const placeOdds = item.win_place_odds_data.combinations.filter(c => c.second === 1);
+                                  if (placeOdds.length === 0) return 'なし';
+                                  const minPlace = placeOdds.reduce((min, c) => c.odds < min.odds ? c : min);
+                                  return `${minPlace.first}号艇 (${minPlace.range_text || minPlace.odds.toFixed(1)})`;
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="bulk-data-status">
+                          {item.race_data ? '✓ レースデータ' : '✗ レースデータなし'}
+                          {item.win_place_odds_data ? ', ✓ 単複' : ', ✗ 単複なし'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!raceData && !error && !loading && !winPlaceOddsData && !winPlaceOddsLoading && bulkData.length === 0 && (
             <div className="placeholder">
               <p>左のフォームからレース情報を取得してください</p>
             </div>

@@ -62,10 +62,13 @@ pub fn fetch_odds_info_from_kyoteibiyori(
 ) -> Result<String, Box<dyn std::error::Error>> {
     // オッズ一覧ページ（slider=6）にアクセスし、単勝・複勝タブをクリック
     let slider = 6;
-    
+
     println!("=== 単勝・複勝オッズデータ取得開始 ===");
-    println!("競艇場: {}, レース: {}, 日付: {}, slider: {}", place_no, race_no, today, slider);
-    
+    println!(
+        "競艇場: {}, レース: {}, 日付: {}, slider: {}",
+        place_no, race_no, today, slider
+    );
+
     // ベースURLとパラメータを組み立てる
     let url_base = "https://kyoteibiyori.com/race_shusso.php";
     let url = format!(
@@ -84,16 +87,16 @@ pub fn fetch_odds_info_from_kyoteibiyori(
 
     // オッズページの読み込みを待つ
     tab.wait_for_element("li.btnOdds")?;
-    
+
     // 単勝・複勝タブを探してクリック
     println!("単勝・複勝タブを探しています...");
     let win_place_tab_result = tab.find_element(r#"li.line-left.btnOdds[id="tf"]"#);
-    
+
     match win_place_tab_result {
         Ok(win_place_tab) => {
             println!("単勝・複勝タブを発見、クリックします");
             win_place_tab.click()?;
-            
+
             // クリック後の遷移を待つ
             std::thread::sleep(std::time::Duration::from_secs(2));
         }
@@ -102,7 +105,7 @@ pub fn fetch_odds_info_from_kyoteibiyori(
             // より汎用的なセレクタで再試行
             let tabs = tab.find_elements("li.btnOdds")?;
             println!("見つかったタブ数: {}", tabs.len());
-            
+
             for (i, tab_element) in tabs.iter().enumerate() {
                 if let Ok(text) = tab_element.get_inner_text() {
                     println!("タブ{}: {}", i, text);
@@ -130,8 +133,6 @@ pub fn fetch_odds_info_from_kyoteibiyori(
     println!("単勝・複勝オッズHTMLを保存: {}", file_path);
     println!("HTMLサイズ: {} bytes", content.len());
 
-    drop(browser);
-    drop(tab);
     Ok(content)
 }
 
@@ -173,14 +174,23 @@ mod tests {
         let place_no = 1;
         let today = "20250726";
 
-        println!("単勝・複勝オッズデータを取得中: place_no={}, race_no={}, date={}", place_no, race_no, today);
+        println!(
+            "単勝・複勝オッズデータを取得中: place_no={}, race_no={}, date={}",
+            place_no, race_no, today
+        );
 
         // 関数を呼び出して結果を確認
         match fetch_odds_info_from_kyoteibiyori(race_no, place_no, today) {
             Ok(html_content) => {
-                println!("単勝・複勝オッズHTMLを取得しました！HTMLサイズ: {} bytes", html_content.len());
-                println!("HTMLファイルは ./bort-html/{}/win_place_odds.html に保存されました", today);
-                
+                println!(
+                    "単勝・複勝オッズHTMLを取得しました！HTMLサイズ: {} bytes",
+                    html_content.len()
+                );
+                println!(
+                    "HTMLファイルは ./bort-html/{}/win_place_odds.html に保存されました",
+                    today
+                );
+
                 // HTMLコンテンツの先頭部分を表示
                 let preview = if html_content.len() > 500 {
                     &html_content[..500]
@@ -188,15 +198,18 @@ mod tests {
                     &html_content
                 };
                 println!("HTML内容のプレビュー:\n{}", preview);
-                
+
                 // 単勝・複勝オッズページの特徴的な文字列を確認
                 if html_content.contains("単勝") || html_content.contains("複勝") {
                     println!("✅ 単勝・複勝オッズページが正常に取得されました");
                 } else {
                     println!("⚠️ 単勝・複勝オッズページの内容を確認してください");
                 }
-                
-                assert!(!html_content.is_empty(), "単勝・複勝オッズHTMLデータが空です！");
+
+                assert!(
+                    !html_content.is_empty(),
+                    "単勝・複勝オッズHTMLデータが空です！"
+                );
             }
             Err(e) => {
                 eprintln!("単勝・複勝オッズデータ取得でエラーが発生しました: {}", e);

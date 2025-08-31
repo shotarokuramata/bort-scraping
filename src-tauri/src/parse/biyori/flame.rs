@@ -93,6 +93,16 @@ pub struct OddsData {
 }
 
 #[derive(Debug, serde::Serialize)]
+pub struct BulkRaceData {
+    pub date: String,
+    pub place_number: u32,
+    pub race_number: u32,
+    pub race_data: Option<RaceData>,
+    pub win_place_odds_data: Option<OddsData>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize)]
 pub struct DetailedPerformanceData {
     pub first_place_rate: PerformanceData,
     pub top_2_rate: PerformanceData,
@@ -1514,50 +1524,4 @@ mod odds_tests {
         }
     }
 
-    #[test]
-    fn test_parse_odds_from_html_20250726() {
-        println!("=== オッズデータ解析テスト ===");
-        
-        // テスト用HTMLファイルを読み込み
-        let file_path = "./bort-html/20250726/odds.html";
-        let html_content = match fs::read_to_string(file_path) {
-            Ok(content) => content,
-            Err(e) => {
-                println!("HTMLファイルの読み込みに失敗: {}", e);
-                println!("まず `cargo test test_fetch_odds_info_from_kyoteibiyori` を実行してHTMLファイルを生成してください");
-                return;
-            }
-        };
-
-        println!("HTMLファイルサイズ: {} bytes", html_content.len());
-
-        // オッズデータを解析
-        match parse_odds_from_html(&html_content) {
-            Ok(odds_data) => {
-                println!("✅ オッズデータ解析成功!");
-                println!("ベッティングタイプ: {:?}", odds_data.betting_type);
-                println!("組み合わせ数: {}", odds_data.combinations.len());
-                
-                // 最初の10組み合わせを表示
-                println!("\n=== 最初の10組み合わせ ===");
-                for (i, combination) in odds_data.combinations.iter().take(10).enumerate() {
-                    if let Some(third) = combination.third {
-                        println!("{}: {}-{}-{} = {}", i + 1, combination.first, combination.second, third, combination.odds);
-                    } else {
-                        println!("{}: {}-{} = {}", i + 1, combination.first, combination.second, combination.odds);
-                    }
-                }
-                
-                // 基本的な検証
-                assert!(!odds_data.combinations.is_empty(), "組み合わせが取得されていません");
-                assert!(matches!(odds_data.betting_type, BettingType::Trifecta), "ベッティングタイプが正しくありません");
-                
-                println!("✅ 全てのテストが成功しました!");
-            }
-            Err(e) => {
-                println!("❌ オッズデータ解析失敗: {}", e);
-                panic!("オッズデータ解析に失敗しました: {}", e);
-            }
-        }
-    }
 }
