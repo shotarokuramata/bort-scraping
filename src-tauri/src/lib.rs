@@ -13,9 +13,51 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[derive(serde::Serialize)]
+pub struct RaceVenue {
+    pub place_id: u32,
+    pub place_name: String,
+    pub races: Vec<u32>, // 開催レース番号のリスト
+}
+
+#[derive(serde::Serialize)]
+pub struct ActiveRace {
+    pub date: String,
+    pub venues: Vec<RaceVenue>,
+}
+
 #[tauri::command]
-fn hello_world() -> String {
-    "Hello Unchi".to_string()
+fn get_active_races() -> Result<ActiveRace, String> {
+    // モックデータを返す（後で実際のスクレイピングに置き換え）
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    
+    let venues = vec![
+        RaceVenue {
+            place_id: 1,
+            place_name: "桐生".to_string(),
+            races: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        },
+        RaceVenue {
+            place_id: 3,
+            place_name: "江戸川".to_string(),
+            races: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        },
+        RaceVenue {
+            place_id: 7,
+            place_name: "蒲郡".to_string(),
+            races: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        },
+        RaceVenue {
+            place_id: 14,
+            place_name: "鳴門".to_string(),
+            races: vec![1, 2, 3, 4, 5, 6],
+        },
+    ];
+
+    Ok(ActiveRace {
+        date: today,
+        venues,
+    })
 }
 
 #[tauri::command]
@@ -200,7 +242,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
-            hello_world,
+            get_active_races,
             get_biyori_info,
             get_odds_info,
             get_win_place_odds_info,

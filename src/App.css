@@ -731,3 +731,62 @@ button {
     gap: 0.5rem;
   }
 }
+
+/* 開催レース場テーブルのスタイル */
+.active-races-table {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.active-races-table h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.races-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.venue-card {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.venue-name {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.races-buttons {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.race-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.race-button:hover {
+  background-color: #0056b3;
+}
+
+.race-button:active {
+  transform: scale(0.98);
+}
