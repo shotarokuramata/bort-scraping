@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { HelloMessage, RaceDataForm, BulkDataForm } from "./components/forms";
-import { RaceDataContainer, OddsDataContainer, BulkResultsContainer } from "./components/containers";
-import { useHelloWorld, useRaceData, useOddsData, useBulkData } from "./hooks";
+import { RaceDataContainer, OddsDataContainer, BulkResultsContainer, ActiveRacesTable } from "./components/containers";
+import { useHelloWorld, useActiveRaces, useRaceData, useOddsData, useBulkData } from "./hooks";
 import "./App.css";
 
 function App() {
   const helloMessage = useHelloWorld();
+  const { activeRaces, loading: activeRacesLoading, error: activeRacesError } = useActiveRaces();
   const { raceData, loading: raceLoading, error: raceError, fetchRaceData } = useRaceData();
   const { oddsData, loading: oddsLoading, error: oddsError, fetchOddsData } = useOddsData();
   const { bulkData, loading: bulkLoading, error: bulkError, fetchBulkData } = useBulkData();
@@ -20,7 +21,7 @@ function App() {
   const [selectedRaces, setSelectedRaces] = useState<number[]>([1]);
 
   // 統合エラー表示
-  const error = raceError || oddsError || bulkError;
+  const error = activeRacesError || raceError || oddsError || bulkError;
 
   const handlePlaceSelectionChange = (placeNumber: number, checked: boolean) => {
     if (checked) {
@@ -38,10 +39,29 @@ function App() {
     }
   };
 
+  const handleActiveRaceSelect = (placeId: number, _placeName: string, raceNumber: number) => {
+    // 現在の日付を設定
+    const today = new Date().toISOString().split('T')[0];
+    setDate(today);
+    setPlaceNumber(placeId.toString());
+    setRaceNumber(raceNumber.toString());
+    
+    // 自動でデータを取得
+    fetchRaceData(today, raceNumber.toString(), placeId.toString());
+    fetchOddsData(today, raceNumber.toString(), placeId.toString());
+  };
+
   return (
     <main className="container">
       <h1>Welcome to bort scraping tool !!</h1>
       <HelloMessage message={helloMessage} />
+
+      {activeRacesLoading && <div>開催レース場を読み込み中...</div>}
+      
+      <ActiveRacesTable 
+        activeRaces={activeRaces}
+        onRaceSelect={handleActiveRaceSelect}
+      />
 
       <div className="main-content">
         <div className="left-panel">
