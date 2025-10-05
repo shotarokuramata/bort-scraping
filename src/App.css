@@ -638,6 +638,71 @@ button {
   font-weight: 600;
 }
 
+/* 一括取得結果の詳細表示スタイル */
+.bulk-race-details {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 3px solid #4299e1;
+}
+
+.bulk-race-summary {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.bulk-race-stats .stat-row {
+  display: flex;
+  gap: 1rem;
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #4a5568;
+}
+
+.bulk-race-stats .stat-row span {
+  flex: 1;
+}
+
+.bulk-odds-details, .bulk-win-place-details {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: #f7fafc;
+  border-radius: 6px;
+  border-left: 3px solid #48bb78;
+}
+
+.bulk-odds-summary, .bulk-win-place-summary {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.bulk-odds-highlights, .bulk-win-place-highlights {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+
+.odds-highlight, .win-place-highlight {
+  display: flex;
+  gap: 0.5rem;
+  color: #4a5568;
+}
+
+.odds-highlight span:first-child,
+.win-place-highlight span:first-child {
+  font-weight: 500;
+  min-width: 70px;
+}
+
+.bulk-data-status {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.8rem;
+  color: #718096;
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .odds-grid {
@@ -655,4 +720,73 @@ button {
   .combination {
     font-size: 0.8rem;
   }
+
+  .bulk-race-stats .stat-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .bulk-odds-highlights, .bulk-win-place-highlights {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* 開催レース場テーブルのスタイル */
+.active-races-table {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.active-races-table h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.races-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.venue-card {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.venue-name {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.races-buttons {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.race-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.race-button:hover {
+  background-color: #0056b3;
+}
+
+.race-button:active {
+  transform: scale(0.98);
 }

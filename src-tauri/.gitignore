@@ -8,3 +8,6 @@
 
 /bort-html/*
 !/bort-html/.gitkeep
+
+# Database files
+bort_race_data.json

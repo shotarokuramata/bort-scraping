@@ -1,7 +1,7 @@
 use scraper::{Html, Selector};
 use std::fmt;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct PlayerBasicInfo {
     pub registration_number: String,
     pub name: String,
@@ -11,7 +11,7 @@ pub struct PlayerBasicInfo {
     pub gender: String,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct PerformanceData {
     pub this_period: Option<f64>,
     pub last_6_months: Option<f64>,
@@ -22,13 +22,13 @@ pub struct PerformanceData {
     pub sg_g1: Option<f64>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct LaneWinRateData {
     pub last_1_year: Option<f64>,
     pub last_6_months: Option<f64>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct STData {
     pub this_period: Option<f64>,
     pub last_6_months: Option<f64>,
@@ -43,21 +43,21 @@ pub struct STData {
     pub flying_history: Option<f64>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct STAnalysisData {
     pub stability_rate: Option<f64>,
     pub break_out_rate: Option<f64>,
     pub late_start_rate: Option<f64>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct STRelatedData {
     pub average_st: STData,
     pub st_ranking: STData,
     pub st_analysis: STAnalysisData,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct WinningHandData {
     pub escape_rate_6months: Option<f64>,
     pub let_escape_rate_6months: Option<f64>,
@@ -66,7 +66,7 @@ pub struct WinningHandData {
     pub overtake_rate_6months: Option<f64>,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct OddsCombination {
     pub first: u8,
     pub second: u8,
@@ -76,7 +76,7 @@ pub struct OddsCombination {
     pub range_text: Option<String>, // 複勝オッズの場合、元の範囲文字列（例："2.4-3.5"）
 }
 
-#[derive(Debug, Clone, serde::Serialize, PartialEq)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize, PartialEq)]
 pub enum BettingType {
     Trifecta,      // 3連単
     Tricast,       // 3連複
@@ -86,13 +86,23 @@ pub enum BettingType {
     WinPlace,      // 単勝・複勝
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct OddsData {
     pub betting_type: BettingType,
     pub combinations: Vec<OddsCombination>,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
+pub struct BulkRaceData {
+    pub date: String,
+    pub place_number: u32,
+    pub race_number: u32,
+    pub race_data: Option<RaceData>,
+    pub win_place_odds_data: Option<OddsData>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct DetailedPerformanceData {
     pub first_place_rate: PerformanceData,
     pub top_2_rate: PerformanceData,
@@ -100,7 +110,7 @@ pub struct DetailedPerformanceData {
     pub lane_win_rate: LaneWinRateData,
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct RaceData {
     pub escape_last_year: f64,
     pub escape_last_half_year: f64,
@@ -1514,50 +1524,4 @@ mod odds_tests {
         }
     }
 
-    #[test]
-    fn test_parse_odds_from_html_20250726() {
-        println!("=== オッズデータ解析テスト ===");
-        
-        // テスト用HTMLファイルを読み込み
-        let file_path = "./bort-html/20250726/odds.html";
-        let html_content = match fs::read_to_string(file_path) {
-            Ok(content) => content,
-            Err(e) => {
-                println!("HTMLファイルの読み込みに失敗: {}", e);
-                println!("まず `cargo test test_fetch_odds_info_from_kyoteibiyori` を実行してHTMLファイルを生成してください");
-                return;
-            }
-        };
-
-        println!("HTMLファイルサイズ: {} bytes", html_content.len());
-
-        // オッズデータを解析
-        match parse_odds_from_html(&html_content) {
-            Ok(odds_data) => {
-                println!("✅ オッズデータ解析成功!");
-                println!("ベッティングタイプ: {:?}", odds_data.betting_type);
-                println!("組み合わせ数: {}", odds_data.combinations.len());
-                
-                // 最初の10組み合わせを表示
-                println!("\n=== 最初の10組み合わせ ===");
-                for (i, combination) in odds_data.combinations.iter().take(10).enumerate() {
-                    if let Some(third) = combination.third {
-                        println!("{}: {}-{}-{} = {}", i + 1, combination.first, combination.second, third, combination.odds);
-                    } else {
-                        println!("{}: {}-{} = {}", i + 1, combination.first, combination.second, combination.odds);
-                    }
-                }
-                
-                // 基本的な検証
-                assert!(!odds_data.combinations.is_empty(), "組み合わせが取得されていません");
-                assert!(matches!(odds_data.betting_type, BettingType::Trifecta), "ベッティングタイプが正しくありません");
-                
-                println!("✅ 全てのテストが成功しました!");
-            }
-            Err(e) => {
-                println!("❌ オッズデータ解析失敗: {}", e);
-                panic!("オッズデータ解析に失敗しました: {}", e);
-            }
-        }
-    }
 }
