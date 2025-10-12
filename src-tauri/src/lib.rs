@@ -28,9 +28,9 @@ pub struct ActiveRace {
 }
 
 #[tauri::command]
-fn get_active_races() -> Result<ActiveRace, String> {
+async fn get_active_races() -> Result<ActiveRace, String> {
     // 月間スケジュールを取得してパース
-    let monthly_schedule = get_monthly_schedule()?;
+    let monthly_schedule = get_monthly_schedule().await?;
 
     // 今日開催中の競艇場を抽出
     let today = chrono::Local::now().date_naive();
@@ -67,73 +67,86 @@ fn get_active_races() -> Result<ActiveRace, String> {
 }
 
 #[tauri::command]
-fn get_monthly_schedule() -> Result<parse::official::MonthlySchedule, String> {
+async fn get_monthly_schedule() -> Result<parse::official::MonthlySchedule, String> {
     let current_month = chrono::Local::now().format("%Y%m").to_string();
     let file_path = format!("bort-html/monthly_schedule_{}.html", current_month);
 
     // 1. 必要に応じてHTMLを取得
     if !std::fs::metadata(&file_path).is_ok() {
-        fetcher::fetch_and_cache_monthly_schedule()?;
+        fetcher::fetch_and_cache_monthly_schedule().await?;
     }
 
-    // 2. ファイルを直接パース
-    let html = std::fs::read_to_string(&file_path)
-        .map_err(|e| format!("ファイル読み込みエラー: {}", e))?;
+    // 2. ファイルを直接パース（ファイルI/Oは別スレッドで実行）
+    tokio::task::spawn_blocking(move || {
+        let html = std::fs::read_to_string(&file_path)
+            .map_err(|e| format!("ファイル読み込みエラー: {}", e))?;
 
-    parse::official::parse_monthly_schedule(&html).map_err(|e| format!("パースエラー: {}", e))
+        parse::official::parse_monthly_schedule(&html).map_err(|e| format!("パースエラー: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task execution error: {}", e))?
 }
 
 #[tauri::command]
-fn get_biyori_info(
+async fn get_biyori_info(
     date: &str,
     race_number: &str,
     place_number: &str,
 ) -> Result<parse::biyori::flame::RaceData, String> {
-    let race_no = match race_number.parse::<u32>() {
-        Ok(n) => n,
-        Err(_) => return Err(format!("Invalid race number: {}", race_number)),
-    };
-    let place_no = match place_number.parse::<u32>() {
-        Ok(n) => n,
-        Err(_) => return Err(format!("Invalid place number: {}", place_number)),
-    };
+    let date = date.to_string();
+    let race_number = race_number.to_string();
+    let place_number = place_number.to_string();
 
-    // 1. まずデータベースから取得を試行
-    match database::get_race_data(date, place_no, race_no) {
-        Ok(Some(cached_data)) => {
-            println!("📦 キャッシュからレースデータを取得: {}-{}-{}", date, place_no, race_no);
-            return Ok(cached_data);
-        }
-        Ok(None) => {
-            println!("🌐 キャッシュにデータなし、スクレイピング実行: {}-{}-{}", date, place_no, race_no);
-        }
-        Err(err) => {
-            println!("⚠️ データベース取得エラー、スクレイピング実行: {}", err);
-        }
-    }
+    // 重い処理を別スレッドで実行
+    tokio::task::spawn_blocking(move || {
+        let race_no = match race_number.parse::<u32>() {
+            Ok(n) => n,
+            Err(_) => return Err(format!("Invalid race number: {}", race_number)),
+        };
+        let place_no = match place_number.parse::<u32>() {
+            Ok(n) => n,
+            Err(_) => return Err(format!("Invalid place number: {}", place_number)),
+        };
 
-    // 2. キャッシュにない場合はスクレイピング実行
-    let date_str = date.replace("-", "");
-    let slider = 1; // 枠別情報
-    let result =
-        headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, &date_str, slider);
-    if result.is_err() {
-        return Err(format!("an error occurred: {}", result.unwrap_err()));
-    }
-
-    let race_data = parse::biyori::flame::get_escaped_flame_info(&result.unwrap());
-    match race_data {
-        Ok(data) => {
-            // 3. 取得したデータをデータベースに保存
-            if let Err(save_err) = database::save_race_data(date, place_no, race_no, &data) {
-                println!("⚠️ データベース保存エラー: {}", save_err);
-            } else {
-                println!("💾 レースデータをデータベースに保存: {}-{}-{}", date, place_no, race_no);
+        // 1. まずデータベースから取得を試行
+        match database::get_race_data(&date, place_no, race_no) {
+            Ok(Some(cached_data)) => {
+                println!("📦 キャッシュからレースデータを取得: {}-{}-{}", date, place_no, race_no);
+                return Ok(cached_data);
             }
-            Ok(data)
-        },
-        Err(err) => Err(format!("an error occurred: {}", err)),
-    }
+            Ok(None) => {
+                println!("🌐 キャッシュにデータなし、スクレイピング実行: {}-{}-{}", date, place_no, race_no);
+            }
+            Err(err) => {
+                println!("⚠️ データベース取得エラー、スクレイピング実行: {}", err);
+            }
+        }
+
+        // 2. キャッシュにない場合はスクレイピング実行
+        let date_str = date.replace("-", "");
+        let slider = 1; // 枠別情報
+        let result =
+            headress::fetch_shusso_info_from_kyoteibiyori(race_no, place_no, &date_str, slider);
+        if result.is_err() {
+            return Err(format!("an error occurred: {}", result.unwrap_err()));
+        }
+
+        let race_data = parse::biyori::flame::get_escaped_flame_info(&result.unwrap());
+        match race_data {
+            Ok(data) => {
+                // 3. 取得したデータをデータベースに保存
+                if let Err(save_err) = database::save_race_data(&date, place_no, race_no, &data) {
+                    println!("⚠️ データベース保存エラー: {}", save_err);
+                } else {
+                    println!("💾 レースデータをデータベースに保存: {}-{}-{}", date, place_no, race_no);
+                }
+                Ok(data)
+            },
+            Err(err) => Err(format!("an error occurred: {}", err)),
+        }
+    })
+    .await
+    .map_err(|e| format!("Task execution error: {}", e))?
 }
 
 #[tauri::command]
@@ -157,56 +170,65 @@ fn get_odds_info(date: &str, race_number: &str, place_number: &str) -> Result<St
 }
 
 #[tauri::command]
-fn get_win_place_odds_info(
+async fn get_win_place_odds_info(
     date: &str,
     race_number: &str,
     place_number: &str,
 ) -> Result<parse::biyori::flame::OddsData, String> {
-    let race_no = match race_number.parse::<u32>() {
-        Ok(n) => n,
-        Err(_) => return Err(format!("Invalid race number: {}", race_number)),
-    };
-    let place_no = match place_number.parse::<u32>() {
-        Ok(n) => n,
-        Err(_) => return Err(format!("Invalid place number: {}", place_number)),
-    };
+    let date = date.to_string();
+    let race_number = race_number.to_string();
+    let place_number = place_number.to_string();
 
-    // 1. まずデータベースから取得を試行
-    match database::get_odds_data(date, place_no, race_no) {
-        Ok(Some(cached_odds)) => {
-            println!("📦 キャッシュからオッズデータを取得: {}-{}-{}", date, place_no, race_no);
-            return Ok(cached_odds);
-        }
-        Ok(None) => {
-            println!("🌐 キャッシュにデータなし、スクレイピング実行: {}-{}-{}", date, place_no, race_no);
-        }
-        Err(err) => {
-            println!("⚠️ データベース取得エラー、スクレイピング実行: {}", err);
-        }
-    }
+    // 重い処理を別スレッドで実行
+    tokio::task::spawn_blocking(move || {
+        let race_no = match race_number.parse::<u32>() {
+            Ok(n) => n,
+            Err(_) => return Err(format!("Invalid race number: {}", race_number)),
+        };
+        let place_no = match place_number.parse::<u32>() {
+            Ok(n) => n,
+            Err(_) => return Err(format!("Invalid place number: {}", place_number)),
+        };
 
-    // 2. キャッシュにない場合はスクレイピング実行
-    let date_str = date.replace("-", "");
-    let html_result = headress::fetch_odds_info_from_kyoteibiyori(race_no, place_no, &date_str);
-    let html_content = match html_result {
-        Ok(content) => content,
-        Err(err) => return Err(format!("単勝・複勝HTML取得エラー: {}", err)),
-    };
-
-    // 単勝・複勝オッズデータを解析
-    let odds_result = parse::biyori::flame::parse_win_place_odds_from_html(&html_content);
-    match odds_result {
-        Ok(odds_data) => {
-            // 3. 取得したデータをデータベースに保存
-            if let Err(save_err) = database::save_odds_data(date, place_no, race_no, &odds_data) {
-                println!("⚠️ データベース保存エラー: {}", save_err);
-            } else {
-                println!("💾 オッズデータをデータベースに保存: {}-{}-{}", date, place_no, race_no);
+        // 1. まずデータベースから取得を試行
+        match database::get_odds_data(&date, place_no, race_no) {
+            Ok(Some(cached_odds)) => {
+                println!("📦 キャッシュからオッズデータを取得: {}-{}-{}", date, place_no, race_no);
+                return Ok(cached_odds);
             }
-            Ok(odds_data)
-        },
-        Err(err) => Err(format!("単勝・複勝オッズ解析エラー: {}", err)),
-    }
+            Ok(None) => {
+                println!("🌐 キャッシュにデータなし、スクレイピング実行: {}-{}-{}", date, place_no, race_no);
+            }
+            Err(err) => {
+                println!("⚠️ データベース取得エラー、スクレイピング実行: {}", err);
+            }
+        }
+
+        // 2. キャッシュにない場合はスクレイピング実行
+        let date_str = date.replace("-", "");
+        let html_result = headress::fetch_odds_info_from_kyoteibiyori(race_no, place_no, &date_str);
+        let html_content = match html_result {
+            Ok(content) => content,
+            Err(err) => return Err(format!("単勝・複勝HTML取得エラー: {}", err)),
+        };
+
+        // 単勝・複勝オッズデータを解析
+        let odds_result = parse::biyori::flame::parse_win_place_odds_from_html(&html_content);
+        match odds_result {
+            Ok(odds_data) => {
+                // 3. 取得したデータをデータベースに保存
+                if let Err(save_err) = database::save_odds_data(&date, place_no, race_no, &odds_data) {
+                    println!("⚠️ データベース保存エラー: {}", save_err);
+                } else {
+                    println!("💾 オッズデータをデータベースに保存: {}-{}-{}", date, place_no, race_no);
+                }
+                Ok(odds_data)
+            },
+            Err(err) => Err(format!("単勝・複勝オッズ解析エラー: {}", err)),
+        }
+    })
+    .await
+    .map_err(|e| format!("Task execution error: {}", e))?
 }
 
 #[tauri::command]
