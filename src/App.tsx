@@ -95,10 +95,31 @@ function App() {
         <div className="right-panel">
           {error && <div className="error">{error}</div>}
 
+          {/* レースデータローディング表示 */}
+          {raceLoading && (
+            <div className="loading-message">
+              <div className="loading-spinner"></div>
+              <p>レースデータを取得中...</p>
+            </div>
+          )}
           <RaceDataContainer raceData={raceData} />
 
+          {/* オッズデータローディング表示 */}
+          {oddsLoading && (
+            <div className="loading-message">
+              <div className="loading-spinner"></div>
+              <p>オッズデータを取得中...</p>
+            </div>
+          )}
           <OddsDataContainer oddsData={oddsData} />
 
+          {/* 一括取得ローディング表示 */}
+          {bulkLoading && (
+            <div className="loading-message">
+              <div className="loading-spinner"></div>
+              <p>一括データを取得中...</p>
+            </div>
+          )}
           <BulkResultsContainer bulkData={bulkData} />
 
           {!raceData && !error && !raceLoading && !oddsData && !oddsLoading && bulkData.length === 0 && (
