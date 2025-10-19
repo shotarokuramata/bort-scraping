@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ActiveRace } from "../types";
+import { AllVenuesResponse } from "../types";
 
 export function useActiveRaces() {
-  const [activeRaces, setActiveRaces] = useState<ActiveRace | null>(null);
+  const [allVenues, setAllVenues] = useState<AllVenuesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchActiveRaces = async () => {
+  const fetchAllVenues = async () => {
     setLoading(true);
     setError("");
     
     try {
-      const result = await invoke<ActiveRace>("get_active_races");
-      setActiveRaces(result);
+      const result = await invoke<AllVenuesResponse>("get_all_venues_with_status");
+      setAllVenues(result);
     } catch (err) {
       setError(err as string);
     } finally {
@@ -22,13 +22,13 @@ export function useActiveRaces() {
   };
 
   useEffect(() => {
-    fetchActiveRaces();
+    fetchAllVenues();
   }, []);
 
   return {
-    activeRaces,
+    allVenues,
     loading,
     error,
-    refetch: fetchActiveRaces,
+    refetch: fetchAllVenues,
   };
 }

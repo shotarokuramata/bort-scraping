@@ -759,6 +759,16 @@ button {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.venue-card.inactive {
+  background-color: #f8f9fa;
+  border-color: #e9ecef;
+  opacity: 0.7;
+}
+
+.venue-card.inactive .venue-name {
+  color: #6c757d;
+}
+
 .venue-name {
   margin: 0 0 12px 0;
   color: #333;
@@ -789,6 +799,14 @@ button {
 
 .race-button:active {
   transform: scale(0.98);
+}
+
+.no-races {
+  text-align: center;
+  padding: 16px;
+  color: #6c757d;
+  font-style: italic;
+  font-size: 14px;
 }
 
 /* ローディング表示用スタイル */

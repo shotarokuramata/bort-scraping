@@ -6,7 +6,7 @@ import "./App.css";
 
 function App() {
   const helloMessage = useHelloWorld();
-  const { activeRaces, loading: activeRacesLoading, error: activeRacesError } = useActiveRaces();
+  const { allVenues, loading: activeRacesLoading, error: activeRacesError } = useActiveRaces();
   const { raceData, loading: raceLoading, error: raceError, fetchRaceData } = useRaceData();
   const { oddsData, loading: oddsLoading, error: oddsError, fetchOddsData } = useOddsData();
   const { bulkData, loading: bulkLoading, error: bulkError, fetchBulkData } = useBulkData();
@@ -59,7 +59,7 @@ function App() {
       {activeRacesLoading && <div>開催レース場を読み込み中...</div>}
       
       <ActiveRacesTable 
-        activeRaces={activeRaces}
+        allVenues={allVenues}
         onRaceSelect={handleActiveRaceSelect}
       />
 
