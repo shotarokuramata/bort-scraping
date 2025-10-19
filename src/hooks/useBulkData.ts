@@ -43,7 +43,7 @@ export function useBulkData() {
       setBulkData(result);
       const successCount = result.filter(item => !item.error).length;
       const errorCount = result.filter(item => item.error).length;
-      alert(`一括取得完了: 成功${successCount}件, エラー${errorCount}件`);
+      console.log(`一括取得完了: 成功${successCount}件, エラー${errorCount}件`);
     } catch (err) {
       console.error("一括取得エラー:", err);
       setError(err as string);

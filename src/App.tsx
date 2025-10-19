@@ -6,7 +6,7 @@ import "./App.css";
 
 function App() {
   const helloMessage = useHelloWorld();
-  const { activeRaces, loading: activeRacesLoading, error: activeRacesError } = useActiveRaces();
+  const { allVenues, loading: activeRacesLoading, error: activeRacesError } = useActiveRaces();
   const { raceData, loading: raceLoading, error: raceError, fetchRaceData } = useRaceData();
   const { oddsData, loading: oddsLoading, error: oddsError, fetchOddsData } = useOddsData();
   const { bulkData, loading: bulkLoading, error: bulkError, fetchBulkData } = useBulkData();
@@ -59,7 +59,7 @@ function App() {
       {activeRacesLoading && <div>開催レース場を読み込み中...</div>}
       
       <ActiveRacesTable 
-        activeRaces={activeRaces}
+        allVenues={allVenues}
         onRaceSelect={handleActiveRaceSelect}
       />
 
@@ -95,10 +95,31 @@ function App() {
         <div className="right-panel">
           {error && <div className="error">{error}</div>}
 
+          {/* レースデータローディング表示 */}
+          {raceLoading && (
+            <div className="loading-message">
+              <div className="loading-spinner"></div>
+              <p>レースデータを取得中...</p>
+            </div>
+          )}
           <RaceDataContainer raceData={raceData} />
 
+          {/* オッズデータローディング表示 */}
+          {oddsLoading && (
+            <div className="loading-message">
+              <div className="loading-spinner"></div>
+              <p>オッズデータを取得中...</p>
+            </div>
+          )}
           <OddsDataContainer oddsData={oddsData} />
 
+          {/* 一括取得ローディング表示 */}
+          {bulkLoading && (
+            <div className="loading-message">
+              <div className="loading-spinner"></div>
+              <p>一括データを取得中...</p>
+            </div>
+          )}
           <BulkResultsContainer bulkData={bulkData} />
 
           {!raceData && !error && !raceLoading && !oddsData && !oddsLoading && bulkData.length === 0 && (

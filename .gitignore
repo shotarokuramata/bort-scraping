@@ -25,3 +25,6 @@ dist-ssr
 
 # Generated HTML files
 src-tauri/bort-html/
+
+# Serena MCP cache
+src-tauri/.serena/

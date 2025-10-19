@@ -9,18 +9,18 @@ export function OddsDataContainer({ oddsData }: OddsDataContainerProps) {
   if (!oddsData) return null;
 
   return (
-    <div className="win-place-odds-section">
+    <div className="race-data">
       <h2>単勝・複勝オッズデータ</h2>
-      
-      <div className="win-place-odds-summary">
+
+      <div className="odds-summary">
         <p>総オッズ数: {oddsData.combinations.length}個</p>
       </div>
-      
-      <div className="win-place-odds-grid">
+
+      <div className="odds-grid">
         {/* 単勝オッズ */}
-        <div className="win-place-odds-card">
+        <div className="odds-card">
           <h3>単勝オッズ</h3>
-          <div className="win-place-odds-list">
+          <div className="odds-list">
             {oddsData.combinations
               .filter(combo => combo.second === 0) // 単勝オッズ
               .sort((a, b) => a.first - b.first) // 艇番順でソート
@@ -35,9 +35,9 @@ export function OddsDataContainer({ oddsData }: OddsDataContainerProps) {
         </div>
 
         {/* 複勝オッズ */}
-        <div className="win-place-odds-card">
+        <div className="odds-card">
           <h3>複勝オッズ</h3>
-          <div className="win-place-odds-list">
+          <div className="odds-list">
             {oddsData.combinations
               .filter(combo => combo.second === 1) // 複勝オッズ
               .sort((a, b) => a.first - b.first) // 艇番順でソート

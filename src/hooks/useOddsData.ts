@@ -16,7 +16,6 @@ export function useOddsData() {
       const result = await invoke<OddsData>("get_win_place_odds_info", { date, raceNumber, placeNumber });
       console.log("単勝・複勝オッズデータ取得成功:", result);
       setOddsData(result);
-      alert(`単勝・複勝オッズデータ取得成功: ${result.combinations.length}個のオッズ`);
     } catch (err) {
       console.error("単勝・複勝オッズデータ取得エラー:", err);
       setError(err as string);

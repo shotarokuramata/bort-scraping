@@ -1,16 +1,16 @@
 /// 月間スケジュールのHTTPフェッチとファイル保存を行うモジュール
 
 /// 月間スケジュールをフェッチしてファイルに保存
-pub fn fetch_and_cache_monthly_schedule() -> Result<(), String> {
+pub async fn fetch_and_cache_monthly_schedule() -> Result<(), String> {
     let url = "https://www.boatrace.jp/owpc/pc/race/monthlyschedule";
-    
+
     println!("月間スケジュールページをフェッチ中: {}", url);
-    
-    match reqwest::blocking::get(url) {
+
+    match reqwest::get(url).await {
         Ok(response) => {
             println!("HTTPレスポンス受信完了: {}", response.status());
             
-            match response.text() {
+            match response.text().await {
                 Ok(html) => {
                     println!("HTMLコンテンツサイズ: {} バイト", html.len());
                     
