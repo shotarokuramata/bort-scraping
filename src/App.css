@@ -745,6 +745,80 @@ button {
   color: #333;
 }
 
+/* 新しいセクション別レイアウト */
+.active-venues-section {
+  margin-bottom: 32px;
+}
+
+.inactive-venues-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: bold;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 8px;
+}
+
+/* 開催中の競艇場グリッド（縦長・横幅狭く） */
+.active-races-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  max-width: 1200px;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+  .active-races-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  
+  .venue-card.active {
+    padding: 10px;
+    min-height: 120px;
+  }
+  
+  .venue-name {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  
+  .races-buttons {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+  }
+  
+  .race-button {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .active-races-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .inactive-venues-list {
+    padding: 12px;
+  }
+  
+  .inactive-venue-name {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+/* 旧グリッド（後で削除） */
 .races-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -757,6 +831,15 @@ button {
   border-radius: 8px;
   padding: 16px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.venue-card.active {
+  background-color: white;
+  border: 1px solid #007bff;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0,123,255,0.15);
+  min-height: 140px;
 }
 
 .venue-card.inactive {
@@ -772,14 +855,15 @@ button {
 .venue-name {
   margin: 0 0 12px 0;
   color: #333;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
+  text-align: center;
 }
 
 .races-buttons {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
 }
 
 .race-button {
@@ -807,6 +891,26 @@ button {
   color: #6c757d;
   font-style: italic;
   font-size: 14px;
+}
+
+/* 非開催競艇場のリスト表示 */
+.inactive-venues-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.inactive-venue-name {
+  background-color: white;
+  color: #6c757d;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  border: 1px solid #dee2e6;
 }
 
 /* ローディング表示用スタイル */
