@@ -818,12 +818,6 @@ button {
   }
 }
 
-/* 旧グリッド（後で削除） */
-.races-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
 
 .venue-card {
   background-color: white;
@@ -842,15 +836,6 @@ button {
   min-height: 140px;
 }
 
-.venue-card.inactive {
-  background-color: #f8f9fa;
-  border-color: #e9ecef;
-  opacity: 0.7;
-}
-
-.venue-card.inactive .venue-name {
-  color: #6c757d;
-}
 
 .venue-name {
   margin: 0 0 12px 0;
@@ -885,13 +870,6 @@ button {
   transform: scale(0.98);
 }
 
-.no-races {
-  text-align: center;
-  padding: 16px;
-  color: #6c757d;
-  font-style: italic;
-  font-size: 14px;
-}
 
 /* 非開催競艇場のリスト表示 */
 .inactive-venues-list {
