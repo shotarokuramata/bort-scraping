@@ -2,10 +2,10 @@ name: "publish"
 
 on:
   push:
-    branches:
-      - release
+    tags:
+      - 'v*'
 
-# This workflow will trigger on each push to the `release` branch to create or update a GitHub release, build your app, and upload the artifacts to the release.
+# This workflow will trigger when a tag starting with 'v' is pushed to create a GitHub release, build your app, and upload the artifacts to the release.
 
 jobs:
   publish-tauri:
@@ -59,14 +59,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
-          releaseName: "v__VERSION__"
+          tagName: ${{ github.ref_name }}
+          releaseName: "${{ github.ref_name }}"
           releaseBody: |
-            ## 🚤 競艇スクレイピングアプリ v__VERSION__
+            ## 🚤 競艇スクレイピングアプリ ${{ github.ref_name }}
 
             ### ダウンロード
             - **Windows**: `.exe` または `.msi` ファイル
-            - **macOS (Intel)**: `x86_64-apple-darwin` ファイル  
+            - **macOS (Intel)**: `x86_64-apple-darwin` ファイル
             - **macOS (Apple Silicon)**: `aarch64-apple-darwin` ファイル
             - **Linux**: `AppImage` または `.deb` ファイル
 
