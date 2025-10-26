@@ -9,7 +9,7 @@ function App() {
   const { allVenues, loading: activeRacesLoading, error: activeRacesError } = useActiveRaces();
   const { raceData, loading: raceLoading, error: raceError, fetchRaceData } = useRaceData();
   const { oddsData, loading: oddsLoading, error: oddsError, fetchOddsData } = useOddsData();
-  const { bulkData, loading: bulkLoading, error: bulkError, fetchBulkData } = useBulkData();
+  const { bulkData, loading: bulkLoading, error: bulkError, progress: bulkProgress, fetchBulkData } = useBulkData();
 
   // フォーム状態管理
   const [date, setDate] = useState("");
@@ -117,7 +117,23 @@ function App() {
           {bulkLoading && (
             <div className="loading-message">
               <div className="loading-spinner"></div>
-              <p>一括データを取得中...</p>
+              {bulkProgress ? (
+                <div className="progress-info">
+                  <p>{bulkProgress.message}</p>
+                  <div className="progress-bar-container">
+                    <div
+                      className="progress-bar"
+                      style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="progress-text">
+                    {bulkProgress.current} / {bulkProgress.total}
+                    ({Math.round((bulkProgress.current / bulkProgress.total) * 100)}%)
+                  </p>
+                </div>
+              ) : (
+                <p>一括データを取得中...</p>
+              )}
             </div>
           )}
           <BulkResultsContainer bulkData={bulkData} />

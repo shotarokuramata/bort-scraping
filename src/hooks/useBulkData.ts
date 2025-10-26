@@ -1,11 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { BulkRaceData } from "../types";
+import { listen } from "@tauri-apps/api/event";
+import { BulkRaceData, BulkProgressPayload } from "../types";
 
 export function useBulkData() {
   const [bulkData, setBulkData] = useState<BulkRaceData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState<BulkProgressPayload | null>(null);
+
+  // プログレスイベントをリッスン
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      unlisten = await listen<BulkProgressPayload>("bulk-progress", (event) => {
+        setProgress(event.payload);
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
 
   const fetchBulkData = async (
     startDate: string,
@@ -31,6 +52,7 @@ export function useBulkData() {
     setLoading(true);
     setError("");
     setBulkData([]);
+    setProgress(null);
     
     try {
       const result = await invoke<BulkRaceData[]>("get_bulk_race_data", {
@@ -56,6 +78,7 @@ export function useBulkData() {
     bulkData,
     loading,
     error,
+    progress,
     fetchBulkData,
   };
 }
