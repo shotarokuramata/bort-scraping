@@ -748,16 +748,14 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // ===== パラメータ検証テスト =====
-    
+
     #[tokio::test]
     async fn test_get_biyori_info_invalid_race_number() {
         // 無効なレース番号の検証ロジックをテスト
         let race_number = "invalid";
         let result = race_number.parse::<u32>();
-        
+
         assert!(result.is_err());
         println!("✅ 無効なレース番号検証ロジック成功");
     }
@@ -767,7 +765,7 @@ mod tests {
         // 無効な競艇場番号の検証ロジックをテスト
         let place_number = "invalid";
         let result = place_number.parse::<u32>();
-        
+
         assert!(result.is_err());
         println!("✅ 無効な競艇場番号検証ロジック成功");
     }
@@ -775,40 +773,16 @@ mod tests {
     #[tokio::test]
     async fn test_date_parsing_logic() {
         use chrono::NaiveDate;
-        
+
         // 有効な日付形式
         let valid_result = NaiveDate::parse_from_str("2025-01-15", "%Y-%m-%d");
         assert!(valid_result.is_ok());
-        
+
         // 無効な日付形式
         let invalid_result = NaiveDate::parse_from_str("invalid-date", "%Y-%m-%d");
         assert!(invalid_result.is_err());
-        
+
         println!("✅ 日付パース検証ロジック成功");
     }
 
-    // ===== 以下はTauri Window contextが必要なため、統合テストでのみ実行 =====
-    // 実行方法: cargo test -- --ignored
-
-    #[tokio::test]
-    #[ignore = "Requires Tauri Window context - run with: cargo test -- --ignored"]
-    async fn test_get_biyori_info_valid_params() {
-        // Note: このテストはTauri Windowが必要なため、統合テスト環境でのみ実行可能
-        // 実際のアプリケーションでは正常に動作します
-        println!("⚠️ このテストはTauri環境でのみ実行可能です");
-    }
-
-    #[tokio::test]
-    #[ignore = "Requires Tauri Window context - run with: cargo test -- --ignored"]
-    async fn test_get_win_place_odds_info_valid_params() {
-        // Note: このテストはTauri Windowが必要なため、統合テスト環境でのみ実行可能
-        println!("⚠️ このテストはTauri環境でのみ実行可能です");
-    }
-
-    #[tokio::test]
-    #[ignore = "Requires Tauri Window context - run with: cargo test -- --ignored"]
-    async fn test_get_bulk_race_data_valid_params() {
-        // Note: このテストはTauri Windowが必要なため、統合テスト環境でのみ実行可能
-        println!("⚠️ このテストはTauri環境でのみ実行可能です");
-    }
 }
