@@ -31,12 +31,8 @@ pub async fn fetch_and_cache_monthly_schedule() -> Result<(), String> {
                     
                     println!("HTMLファイルを保存しました: {}", file_path);
                     
-                    // HTMLの最初の200文字を表示（デバッグ用）
-                    let preview = if html.len() > 200 { 
-                        &html[..200] 
-                    } else { 
-                        &html 
-                    };
+                    // HTMLの最初の200文字を表示（デバッグ用、文字境界を考慮）
+                    let preview = html.chars().take(200).collect::<String>();
                     println!("HTML プレビュー: {}", preview);
                     
                     Ok(())

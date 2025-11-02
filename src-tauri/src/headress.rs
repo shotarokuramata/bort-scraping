@@ -191,12 +191,8 @@ mod tests {
                     today
                 );
 
-                // HTMLコンテンツの先頭部分を表示
-                let preview = if html_content.len() > 500 {
-                    &html_content[..500]
-                } else {
-                    &html_content
-                };
+                // HTMLコンテンツの先頭部分を表示（文字境界を考慮）
+                let preview = html_content.chars().take(500).collect::<String>();
                 println!("HTML内容のプレビュー:\n{}", preview);
 
                 // 単勝・複勝オッズページの特徴的な文字列を確認
