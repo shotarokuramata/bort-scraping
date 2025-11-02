@@ -51,9 +51,6 @@ export function BulkResultsContainer({ bulkData }: BulkResultsContainerProps) {
                         <span>差され率(半年): {(item.race_data.pierce_last_half_year * 100).toFixed(1)}%</span>
                         <span>捲られ率(半年): {(item.race_data.overtake_last_half_year * 100).toFixed(1)}%</span>
                       </div>
-                      <div className="stat-row">
-                        <span>直近10レース1着: {item.race_data.first_place_in_last_ten_race}回</span>
-                      </div>
                     </div>
                   </div>
                 )}

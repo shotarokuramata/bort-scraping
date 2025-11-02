@@ -24,8 +24,6 @@ export interface LaneWinRateData {
 
 export interface DetailedPerformanceData {
   first_place_rate: PerformanceData;
-  top_2_rate: PerformanceData;
-  top_3_rate: PerformanceData;
   lane_win_rate: LaneWinRateData;
 }
 
@@ -72,7 +70,6 @@ export interface RaceData {
   pierce_last_half_year: number;
   overtake_last_year: number;
   overtake_last_half_year: number;
-  first_place_in_last_ten_race: number;
   player_basic_info: PlayerBasicInfo;
   detailed_performance: DetailedPerformanceData;
   st_data: STRelatedData;

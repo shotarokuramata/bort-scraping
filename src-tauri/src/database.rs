@@ -154,7 +154,6 @@ mod tests {
             pierce_last_half_year: 16.8,
             overtake_last_year: 20.2,
             overtake_last_half_year: 18.9,
-            first_place_in_last_ten_race: 3,
             player_basic_info: PlayerBasicInfo {
                 registration_number: "4444".to_string(),
                 name: "テスト選手".to_string(),
@@ -172,24 +171,6 @@ mod tests {
                     local_venue: Some(0.32),
                     general_races: Some(0.27),
                     sg_g1: Some(0.20),
-                },
-                top_2_rate: PerformanceData {
-                    this_period: Some(0.50),
-                    last_6_months: Some(0.55),
-                    last_3_months: Some(0.52),
-                    last_1_month: Some(0.60),
-                    local_venue: Some(0.58),
-                    general_races: Some(0.53),
-                    sg_g1: Some(0.45),
-                },
-                top_3_rate: PerformanceData {
-                    this_period: Some(0.75),
-                    last_6_months: Some(0.78),
-                    last_3_months: Some(0.76),
-                    last_1_month: Some(0.80),
-                    local_venue: Some(0.82),
-                    general_races: Some(0.77),
-                    sg_g1: Some(0.70),
                 },
                 lane_win_rate: LaneWinRateData {
                     last_1_year: Some(0.18),

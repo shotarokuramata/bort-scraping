@@ -7,7 +7,6 @@ interface BasicStatsSectionProps {
   pierceLastYear: number;
   overtakeLastHalfYear: number;
   overtakeLastYear: number;
-  firstPlaceInLastTenRace: number;
 }
 
 export function BasicStatsSection({
@@ -19,7 +18,6 @@ export function BasicStatsSection({
   pierceLastYear,
   overtakeLastHalfYear,
   overtakeLastYear,
-  firstPlaceInLastTenRace,
 }: BasicStatsSectionProps) {
   return (
     <div className="basic-stats-section">
@@ -55,14 +53,6 @@ export function BasicStatsSection({
           </tr>
         </tbody>
       </table>
-      
-      <div className="additional-info">
-        <h3>直近10レースの成績</h3>
-        <div className="stat-item">
-          <span className="stat-label">1着回数:</span>
-          <span className="stat-value">{firstPlaceInLastTenRace}回</span>
-        </div>
-      </div>
     </div>
   );
 }

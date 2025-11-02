@@ -27,7 +27,6 @@ export function RaceDataContainer({ raceData }: RaceDataContainerProps) {
         pierceLastYear={raceData.pierce_last_year}
         overtakeLastHalfYear={raceData.overtake_last_half_year}
         overtakeLastYear={raceData.overtake_last_year}
-        firstPlaceInLastTenRace={raceData.first_place_in_last_ten_race}
       />
       
       <PerformanceSection performance={raceData.detailed_performance} />

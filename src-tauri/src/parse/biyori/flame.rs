@@ -105,8 +105,6 @@ pub struct BulkRaceData {
 #[derive(Debug, Clone, norimaki_db::Serialize, norimaki_db::Deserialize)]
 pub struct DetailedPerformanceData {
     pub first_place_rate: PerformanceData,
-    pub top_2_rate: PerformanceData,
-    pub top_3_rate: PerformanceData,
     pub lane_win_rate: LaneWinRateData,
 }
 
@@ -120,7 +118,6 @@ pub struct RaceData {
     pub pierce_last_half_year: f64,
     pub overtake_last_year: f64,
     pub overtake_last_half_year: f64,
-    pub first_place_in_last_ten_race: usize,
     pub player_basic_info: PlayerBasicInfo,
     pub detailed_performance: DetailedPerformanceData,
     pub st_data: STRelatedData,
@@ -217,8 +214,6 @@ impl DetailedPerformanceData {
     pub fn new() -> Self {
         DetailedPerformanceData {
             first_place_rate: PerformanceData::new(),
-            top_2_rate: PerformanceData::new(),
-            top_3_rate: PerformanceData::new(),
             lane_win_rate: LaneWinRateData::new(),
         }
     }
@@ -235,7 +230,6 @@ impl RaceData {
             pierce_last_half_year: 0.0,
             overtake_last_year: 0.0,
             overtake_last_half_year: 0.0,
-            first_place_in_last_ten_race: 0,
             player_basic_info: PlayerBasicInfo::new(),
             detailed_performance: DetailedPerformanceData::new(),
             st_data: STRelatedData::new(),
@@ -248,7 +242,7 @@ impl fmt::Display for RaceData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Escape Last Year: {:.2}%, Escape Last Half Year: {:.2}%, Allow Escape Last Year: {:.2}%, Allow Escape Last Half Year: {:.2}%, Pierce Last Year: {:.2}%, Pierce Last Half Year: {:.2}%, Overtake Last Year: {:.2}%, Overtake Last Half Year: {:.2}%, First Place in Last Ten Races: {}",
+            "Escape Last Year: {:.2}%, Escape Last Half Year: {:.2}%, Allow Escape Last Year: {:.2}%, Allow Escape Last Half Year: {:.2}%, Pierce Last Year: {:.2}%, Pierce Last Half Year: {:.2}%, Overtake Last Year: {:.2}%, Overtake Last Half Year: {:.2}%",
             self.escape_last_year * 100.0,
             self.escape_last_half_year * 100.0,
             self.allow_escape_last_year * 100.0,
@@ -256,8 +250,7 @@ impl fmt::Display for RaceData {
             self.pierce_last_year * 100.0,
             self.pierce_last_half_year * 100.0,
             self.overtake_last_year * 100.0,
-            self.overtake_last_half_year * 100.0,
-            self.first_place_in_last_ten_race
+            self.overtake_last_half_year * 100.0
         )
     }
 }
@@ -393,22 +386,6 @@ pub fn get_escaped_flame_info(content: &str) -> Result<RaceData, Box<dyn std::er
         race_data.overtake_last_year = from_percent_string_to_float(&extracted_values[2][0])?; // 1年間捲られ率
     }
 
-    // 直近10レースで1着の回数
-    let tables: Vec<_> = race_basic.select(&table_selector).collect();
-    if tables.len() >= 6 {
-        let table = &tables[5];
-        let rows: Vec<_> = table.select(&row_selector).collect();
-        if rows.len() > 5 {
-            let row = &rows[5];
-            let row_values: Vec<_> = row
-                .select(&cell_selector)
-                .map(|cell| cell.text().collect::<String>().trim().to_string())
-                .collect();
-            race_data.first_place_in_last_ten_race =
-                row_values.iter().filter(|&v| v == "1").count();
-        }
-    }
-
     // 選手基本情報を抽出
     race_data.player_basic_info = extract_player_basic_info(&document)?;
 
@@ -535,11 +512,9 @@ fn extract_detailed_performance_data(document: &Html) -> Result<DetailedPerforma
     // テーブルの全行を取得
     let rows: Vec<_> = table.select(&row_selector).collect();
 
-    // 1着率、2連対率、3連対率、枠別勝率のデータを抽出
+    // 1着率、枠別勝率のデータを抽出
     let performance_metrics = [
         ("1着率", &mut detailed_performance.first_place_rate),
-        ("2連対率", &mut detailed_performance.top_2_rate),
-        ("3連対率", &mut detailed_performance.top_3_rate),
     ];
 
     for (metric_name, performance_data) in performance_metrics {
@@ -1059,7 +1034,6 @@ mod tests {
                 println!("差され率（半年間）: {:.1}%", race_data.pierce_last_half_year * 100.0);
                 println!("捲られ率（1年間）: {:.1}%", race_data.overtake_last_year * 100.0);
                 println!("捲られ率（半年間）: {:.1}%", race_data.overtake_last_half_year * 100.0);
-                println!("直近10レース1着回数: {}", race_data.first_place_in_last_ten_race);
                 println!("\n=== 選手基本情報 ===");
                 println!("登録番号: {}", race_data.player_basic_info.registration_number);
                 println!("選手名: {}", race_data.player_basic_info.name);
@@ -1079,24 +1053,6 @@ mod tests {
                 if let Some(v) = race_data.detailed_performance.first_place_rate.local_venue { println!("  当地: {:.1}%", v * 100.0); }
                 if let Some(v) = race_data.detailed_performance.first_place_rate.general_races { println!("  一般戦: {:.1}%", v * 100.0); }
                 if let Some(v) = race_data.detailed_performance.first_place_rate.sg_g1 { println!("  SG/G1: {:.1}%", v * 100.0); }
-
-                println!("【2連対率】");
-                if let Some(v) = race_data.detailed_performance.top_2_rate.this_period { println!("  今期: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_2_rate.last_6_months { println!("  直近6ヶ月: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_2_rate.last_3_months { println!("  直近3ヶ月: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_2_rate.last_1_month { println!("  直近1ヶ月: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_2_rate.local_venue { println!("  当地: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_2_rate.general_races { println!("  一般戦: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_2_rate.sg_g1 { println!("  SG/G1: {:.1}%", v * 100.0); }
-
-                println!("【3連対率】");
-                if let Some(v) = race_data.detailed_performance.top_3_rate.this_period { println!("  今期: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_3_rate.last_6_months { println!("  直近6ヶ月: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_3_rate.last_3_months { println!("  直近3ヶ月: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_3_rate.last_1_month { println!("  直近1ヶ月: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_3_rate.local_venue { println!("  当地: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_3_rate.general_races { println!("  一般戦: {:.1}%", v * 100.0); }
-                if let Some(v) = race_data.detailed_performance.top_3_rate.sg_g1 { println!("  SG/G1: {:.1}%", v * 100.0); }
 
                 println!("【枠別勝率】");
                 if let Some(v) = race_data.detailed_performance.lane_win_rate.last_1_year { println!("  直近1年: {:.1}%", v * 100.0); }
@@ -1154,7 +1110,6 @@ mod tests {
                 println!("差され率（半年間）期待値: 25.0%, 実際値: {:.1}%", race_data.pierce_last_half_year * 100.0);
                 println!("捲られ率（1年間）期待値: 27.6%, 実際値: {:.1}%", race_data.overtake_last_year * 100.0);
                 println!("捲られ率（半年間）期待値: 31.3%, 実際値: {:.1}%", race_data.overtake_last_half_year * 100.0);
-                println!("直近10レース1着回数期待値: 1回, 実際値: {}回", race_data.first_place_in_last_ten_race);
 
                 // 全項目のアサーション（許容誤差0.1%で比較）
                 assert!((race_data.escape_last_year * 100.0 - 31.0).abs() < 0.1, 
@@ -1171,11 +1126,9 @@ mod tests {
                     "差され率（半年間）が期待値と異なります: 期待25.0%, 実際{:.1}%", race_data.pierce_last_half_year * 100.0);
                 assert!((race_data.overtake_last_year * 100.0 - 27.6).abs() < 0.1, 
                     "捲られ率（1年間）が期待値と異なります: 期待27.6%, 実際{:.1}%", race_data.overtake_last_year * 100.0);
-                assert!((race_data.overtake_last_half_year * 100.0 - 31.3).abs() < 0.1, 
+                assert!((race_data.overtake_last_half_year * 100.0 - 31.3).abs() < 0.1,
                     "捲られ率（半年間）が期待値と異なります: 期待31.3%, 実際{:.1}%", race_data.overtake_last_half_year * 100.0);
-                assert_eq!(race_data.first_place_in_last_ten_race, 1, 
-                    "直近10レース1着回数が期待値と異なります: 期待1回, 実際{}回", race_data.first_place_in_last_ten_race);
-                
+
                 // 選手基本情報のアサーション（20250705データ基準：1号艇 高山秀雄選手）
                 assert_eq!(race_data.player_basic_info.registration_number, "3448", 
                     "登録番号が期待値と異なります: 期待3448, 実際{}", race_data.player_basic_info.registration_number);
