@@ -1,0 +1,25 @@
+[tools]
+node = "22"
+pnpm = "9"
+
+[tasks]
+# フロントエンド開発
+dev = "pnpm dev"
+build = "pnpm build"
+preview = "pnpm preview"
+
+# Tauri開発
+"tauri:dev" = "pnpm tauri dev"
+"tauri:build" = "pnpm tauri build"
+
+# Rustテスト（開発時推奨）
+test = "cargo test --lib"                                    # ライブラリテスト（~1分）
+"test:all" = "cargo test"                                    # 全テスト実行（時間がかかる）
+"test:quick" = "cargo test tests::test_get_biyori_info_invalid"  # 高速テスト（~1秒）
+"test:parse" = "cargo test parse::"                          # パース機能テスト
+"test:headress" = "cargo test headress::"                    # スクレイピングテスト（~15秒）
+
+# カテゴリ別テスト
+"test:commands" = "cargo test tests::"                       # Tauriコマンドテスト
+"test:biyori" = "cargo test tests::test_get_biyori_info_valid"  # 実データ取得テスト（~10秒）
+"test:odds" = "cargo test tests::test_get_win_place_odds_info_valid"  # 実オッズテスト（~8秒）
