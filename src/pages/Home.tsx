@@ -24,11 +24,16 @@ function Home() {
             </ul>
           </Link>
 
-          <div className="menu-card disabled">
-            <div className="card-icon">🚧</div>
-            <h2>新機能（準備中）</h2>
-            <p>今後追加予定の機能がここに表示されます</p>
-          </div>
+          <Link to="/table-parser" className="menu-card">
+            <div className="card-icon">📋</div>
+            <h2>テーブルパーサー</h2>
+            <p>テーブルデータの解析・変換を行います</p>
+            <ul className="feature-list">
+              <li>データ入力・解析</li>
+              <li>形式変換</li>
+              <li>結果表示</li>
+            </ul>
+          </Link>
         </div>
       </div>
     </div>
