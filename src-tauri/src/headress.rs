@@ -240,4 +240,89 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_scrape_racelist_from_official_site() {
+        // 公式サイトのracelist URLをスクレイピングするテスト
+        let url = "https://www.boatrace.jp/owpc/pc/race/racelist?rno=1&jcd=01&hd=20251125";
+
+        println!("=== 公式サイト racelist ページのスクレイピングテスト ===");
+        println!("URL: {}", url);
+
+        match scrape_html_from_url(url) {
+            Ok(html_content) => {
+                println!("✅ HTML取得成功: {} bytes", html_content.len());
+
+                // HTMLの先頭を表示（デバッグ用）
+                let preview = html_content.chars().take(500).collect::<String>();
+                println!("\n📄 HTML先頭:\n{}", preview);
+
+                // tbody要素の存在確認
+                if html_content.contains("<tbody") {
+                    println!("\n✅ tbody要素が存在します");
+
+                    // tbody内にデータがあるか確認
+                    if let Some(start) = html_content.find("<tbody") {
+                        if let Some(end_pos) = html_content[start..].find("</tbody>") {
+                            let tbody_content = &html_content[start..start + end_pos.min(1000)];
+                            println!("\n🔍 tbody内容（最初の1000文字）:\n{}", tbody_content);
+
+                            // データが含まれているかチェック
+                            let has_data = tbody_content.contains("<tr") && tbody_content.contains("<td");
+                            if has_data {
+                                println!("\n✅ tbodyにデータが含まれています");
+                            } else {
+                                println!("\n⚠️ tbodyが空です（JavaScriptで動的に生成される可能性）");
+                            }
+                        }
+                    }
+                } else {
+                    println!("\n❌ tbody要素が見つかりません");
+                }
+
+                // レース関連のキーワードチェック
+                let keywords = vec!["出走表", "レース", "選手", "艇番"];
+                println!("\n🔍 キーワード検索:");
+                for keyword in keywords {
+                    let found = html_content.contains(keyword);
+                    println!("  {} : {}", keyword, if found { "✅ 見つかりました" } else { "❌ 見つかりません" });
+                }
+
+                // HTMLファイルとして保存
+                let file_path = "./bort-html/racelist_test_20251125.html";
+                std::fs::create_dir_all("./bort-html").ok();
+                match std::fs::write(file_path, &html_content) {
+                    Ok(_) => println!("\n📁 HTMLを保存しました: {}", file_path),
+                    Err(e) => println!("\n⚠️ HTML保存失敗: {}", e),
+                }
+
+                // 基本的なアサーション
+                assert!(!html_content.is_empty(), "HTMLコンテンツが空です");
+                assert!(html_content.len() > 1000, "HTMLコンテンツが小さすぎます（{}バイト）", html_content.len());
+            }
+            Err(e) => {
+                eprintln!("\n❌ スクレイピングエラー発生:");
+                eprintln!("エラー内容: {}", e);
+                eprintln!("エラー詳細: {:?}", e);
+
+                // エラーの種類を特定
+                let error_msg = format!("{}", e);
+                if error_msg.contains("Chrome") || error_msg.contains("browser") {
+                    eprintln!("\n💡 原因: headless_chromeの起動に失敗した可能性があります");
+                    eprintln!("   - Chromeがインストールされているか確認してください");
+                    eprintln!("   - WSL環境の場合、追加の設定が必要な場合があります");
+                } else if error_msg.contains("timeout") || error_msg.contains("Timeout") {
+                    eprintln!("\n💡 原因: ページの読み込みがタイムアウトしました");
+                    eprintln!("   - ネットワーク接続を確認してください");
+                    eprintln!("   - 待機時間を延長する必要があるかもしれません");
+                } else if error_msg.contains("navigate") {
+                    eprintln!("\n💡 原因: ページへの移動に失敗しました");
+                    eprintln!("   - URLが正しいか確認してください");
+                    eprintln!("   - サイトがアクセス制限をかけている可能性があります");
+                }
+
+                panic!("racelist URLのスクレイピングに失敗: {}", e);
+            }
+        }
+    }
 }

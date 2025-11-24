@@ -1,5 +1,4 @@
 use scraper::{Html, Selector};
-
 #[derive(Debug)]
 pub struct TableInfo {
     pub table_index: usize,
@@ -71,7 +70,9 @@ pub fn analyze_tables(content: &str) -> Result<Vec<TableInfo>, Box<dyn std::erro
     Ok(table_infos)
 }
 
-pub fn find_target_data_location(content: &str) -> Result<Vec<CellInfo>, Box<dyn std::error::Error>> {
+pub fn find_target_data_location(
+    content: &str,
+) -> Result<Vec<CellInfo>, Box<dyn std::error::Error>> {
     let document = Html::parse_document(content);
     let race_basic_selector = Selector::parse("#raceBasic").unwrap();
     let table_selector = Selector::parse("table.table_fixed").unwrap();
@@ -90,14 +91,14 @@ pub fn find_target_data_location(content: &str) -> Result<Vec<CellInfo>, Box<dyn
     if tables.len() > 5 {
         let table = &tables[5];
         let rows: Vec<_> = table.select(&row_selector).collect();
-        
+
         println!("=== Table 5 (6番目のテーブル) の構造 ===");
         println!("行数: {}", rows.len());
 
         for (row_index, row) in rows.iter().enumerate() {
             let cells: Vec<_> = row.select(&cell_selector).collect();
             println!("Row {}: {} columns", row_index, cells.len());
-            
+
             for (col_index, cell) in cells.iter().enumerate() {
                 let content = cell.text().collect::<String>().trim().to_string();
                 let classes: Vec<String> = cell
@@ -118,7 +119,10 @@ pub fn find_target_data_location(content: &str) -> Result<Vec<CellInfo>, Box<dyn
                     });
                 }
 
-                println!("  Col {}: '{}' (classes: {:?})", col_index, content, classes);
+                println!(
+                    "  Col {}: '{}' (classes: {:?})",
+                    col_index, content, classes
+                );
             }
             println!();
         }
