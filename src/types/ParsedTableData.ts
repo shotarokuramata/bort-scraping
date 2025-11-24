@@ -4,3 +4,8 @@ export interface ParsedTableData {
   summary: string;
   data: string[];
 }
+
+export interface TableWithHeaderAndValues {
+  headers: string[];
+  rows: string[][];
+}

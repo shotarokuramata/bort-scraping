@@ -253,6 +253,25 @@
   font-size: 0.9rem;
 }
 
+.copy-button {
+  margin-top: 1rem;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #48bb78;
+  color: white;
+}
+
+.copy-button:hover {
+  background: #38a169;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(72, 187, 120, 0.3);
+}
+
 .result-display {
   margin: 0;
   font-family: 'Courier New', monospace;
@@ -263,6 +282,54 @@
   background: white;
   padding: 1rem;
   border-radius: 5px;
+}
+
+.table-preview,
+.tsv-preview {
+  margin-top: 1rem;
+}
+
+.table-preview h4,
+.tsv-preview h4 {
+  margin: 0 0 0.8rem 0;
+  color: #555;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.data-table {
+  width: auto;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.data-table td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+  background: white;
+}
+
+.data-table td:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.tsv-preview .result-display {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  font-size: 0.85rem;
+  max-height: 150px;
+  overflow: auto;
 }
 
 .placeholder {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
-import { ParsedTableData } from "../types";
+import { ParsedTableData, TableWithHeaderAndValues } from "../types";
 import "./TableParser.css";
 
 function TableParser() {
@@ -52,6 +52,70 @@ function TableParser() {
     setUrl("");
     setParsedData(null);
     setError(null);
+  };
+
+  // テーブルデータを縦持ち（転置）形式に変換
+  const transposeTable = (table: TableWithHeaderAndValues): string[][] => {
+    const result: string[][] = [];
+
+    // 最初の列（ヘッダーの最初の要素）は単独で出力
+    if (table.headers.length > 0) {
+      result.push([table.headers[0]]);
+    }
+
+    // 2列目以降を転置して出力
+    for (let colIndex = 1; colIndex < table.headers.length; colIndex++) {
+      const row: string[] = [table.headers[colIndex]];
+
+      // 各行の同じ列の値を追加
+      for (const dataRow of table.rows) {
+        if (colIndex < dataRow.length) {
+          row.push(dataRow[colIndex]);
+        }
+      }
+
+      result.push(row);
+    }
+
+    return result;
+  };
+
+  // TSV形式に変換（Excelに貼り付け可能）
+  const convertToTSV = (tables: TableWithHeaderAndValues[]): string => {
+    const lines: string[] = [];
+
+    for (const table of tables) {
+      const transposed = transposeTable(table);
+
+      // 各行をタブ区切りで結合
+      for (const row of transposed) {
+        lines.push(row.join('\t'));
+      }
+
+      // テーブル間に空行を追加
+      lines.push('');
+    }
+
+    return lines.join('\n');
+  };
+
+  // JSON文字列をパースしてテーブルデータに変換
+  const parseTableData = (data: string[]): TableWithHeaderAndValues[] => {
+    return data.map(jsonStr => JSON.parse(jsonStr) as TableWithHeaderAndValues);
+  };
+
+  // クリップボードにコピー
+  const handleCopyToClipboard = async () => {
+    if (!parsedData) return;
+
+    try {
+      const tables = parseTableData(parsedData.data);
+      const tsvData = convertToTSV(tables);
+      await navigator.clipboard.writeText(tsvData);
+      alert("コピーしました！Excelに貼り付けてください。");
+    } catch (err) {
+      setError("クリップボードへのコピーに失敗しました");
+    }
   };
 
   return (
@@ -141,17 +205,57 @@ function TableParser() {
             </div>
           )}
 
-          {parsedData && !loading && (
-            <div className="result-container">
-              <div className="result-summary">
-                <h3>{parsedData.summary}</h3>
-                <p>行数: {parsedData.line_count} | 文字数: {parsedData.char_count}</p>
+          {parsedData && !loading && (() => {
+            const tables = parseTableData(parsedData.data);
+            const tsvData = convertToTSV(tables);
+
+            return (
+              <div className="result-container">
+                <div className="result-summary">
+                  <h3>{parsedData.summary}</h3>
+                  <p>行数: {parsedData.line_count} | 文字数: {parsedData.char_count}</p>
+                  <button
+                    className="copy-button"
+                    onClick={handleCopyToClipboard}
+                  >
+                    📋 Excelにコピー
+                  </button>
+                </div>
+
+                {/* テーブル形式のプレビュー（縦持ち） */}
+                {tables.map((table, tableIndex) => {
+                  const transposed = transposeTable(table);
+
+                  return (
+                    <div key={tableIndex} className="table-preview">
+                      <h4>テーブル {tableIndex + 1} - プレビュー（縦持ち）</h4>
+                      <div className="table-wrapper">
+                        <table className="data-table">
+                          <tbody>
+                            {transposed.map((row, rowIndex) => (
+                              <tr key={rowIndex}>
+                                {row.map((cell, cellIndex) => (
+                                  <td key={cellIndex}>{cell}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* TSVテキスト表示 */}
+                <div className="tsv-preview">
+                  <h4>TSV形式（タブ区切り）</h4>
+                  <pre className="result-display">
+                    {tsvData}
+                  </pre>
+                </div>
               </div>
-              <pre className="result-display">
-                {parsedData.data.join('\n')}
-              </pre>
-            </div>
-          )}
+            );
+          })()}
 
           {!parsedData && !loading && !error && (
             <div className="placeholder">
