@@ -11,6 +11,7 @@ function TableParser() {
   const [loading, setLoading] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
 
   const handleScrape = async () => {
     setScraping(true);
@@ -112,7 +113,14 @@ function TableParser() {
       const tables = parseTableData(parsedData.data);
       const tsvData = convertToTSV(tables);
       await navigator.clipboard.writeText(tsvData);
-      alert("コピーしました！Excelに貼り付けてください。");
+
+      // トースト通知を表示
+      setShowToast(true);
+
+      // 3秒後に自動的に消す
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
     } catch (err) {
       setError("クリップボードへのコピーに失敗しました");
     }
@@ -264,6 +272,16 @@ function TableParser() {
           )}
         </div>
       </div>
+
+      {/* トースト通知 */}
+      {showToast && (
+        <div className="toast-notification">
+          <div className="toast-content">
+            <span className="toast-icon">✓</span>
+            <span className="toast-message">コピーしました！Excelに貼り付けてください。</span>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
