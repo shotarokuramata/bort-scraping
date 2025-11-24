@@ -50,7 +50,7 @@ pub fn analyze_tables(content: &str) -> Result<Vec<TableInfo>, Box<dyn std::erro
         }
 
         // 最初の3行をサンプルとして保存
-        for (row_index, row) in rows.iter().enumerate().take(3) {
+        for row in rows.iter().take(3) {
             let row_data: Vec<String> = row
                 .select(&cell_selector)
                 .map(|cell| cell.text().collect::<String>().trim().to_string())

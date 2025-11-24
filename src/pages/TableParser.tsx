@@ -1,25 +1,44 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { invoke } from "@tauri-apps/api/core";
+import { ParsedTableData } from "../types";
 import "./TableParser.css";
 
 function TableParser() {
   const [inputData, setInputData] = useState("");
-  const [parsedData, setParsedData] = useState<any>(null);
+  const [url, setUrl] = useState("");
+  const [parsedData, setParsedData] = useState<ParsedTableData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scraping, setScraping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleScrape = async () => {
+    setScraping(true);
+    setError(null);
+
+    try {
+      // Tauriコマンドを呼び出してURLからHTMLをスクレイピング
+      const html = await invoke<string>("scrape_html_from_url", {
+        url: url
+      });
+      setInputData(html);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "スクレイピングエラーが発生しました");
+    } finally {
+      setScraping(false);
+    }
+  };
 
   const handleParse = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // TODO: ここにテーブルパース処理を実装
-      // 例: Tauriコマンドを呼び出す
-      // const result = await invoke("parse_table", { data: inputData });
-
-      // 仮の処理
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setParsedData({ message: "パース処理はまだ実装されていません" });
+      // Tauriコマンドを呼び出してテーブルをパース
+      const result = await invoke<ParsedTableData>("parse_table", {
+        inputData: inputData
+      });
+      setParsedData(result);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
@@ -30,6 +49,7 @@ function TableParser() {
 
   const handleClear = () => {
     setInputData("");
+    setUrl("");
     setParsedData(null);
     setError(null);
   };
@@ -46,26 +66,52 @@ function TableParser() {
       <div className="parser-content">
         <div className="input-section">
           <h2>入力</h2>
-          <textarea
-            className="input-textarea"
-            value={inputData}
-            onChange={(e) => setInputData(e.target.value)}
-            placeholder="ここにデータを入力してください..."
-            rows={15}
-          />
+
+          {/* URL入力セクション */}
+          <div className="url-input-section">
+            <h3>URLからスクレイピング</h3>
+            <input
+              type="text"
+              className="url-input"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com"
+              disabled={scraping}
+            />
+            <button
+              className="scrape-button"
+              onClick={handleScrape}
+              disabled={scraping || !url}
+            >
+              {scraping ? "スクレイピング中..." : "HTMLを取得"}
+            </button>
+          </div>
+
+          {/* テキスト入力セクション */}
+          <div className="text-input-section">
+            <h3>または直接入力</h3>
+            <textarea
+              className="input-textarea"
+              value={inputData}
+              onChange={(e) => setInputData(e.target.value)}
+              placeholder="ここにデータを入力してください..."
+              rows={15}
+              disabled={scraping}
+            />
+          </div>
 
           <div className="button-group">
             <button
               className="parse-button"
               onClick={handleParse}
-              disabled={loading || !inputData}
+              disabled={loading || scraping || !inputData}
             >
               {loading ? "処理中..." : "パース実行"}
             </button>
             <button
               className="clear-button"
               onClick={handleClear}
-              disabled={loading}
+              disabled={loading || scraping}
             >
               クリア
             </button>
@@ -81,17 +127,28 @@ function TableParser() {
             </div>
           )}
 
+          {scraping && (
+            <div className="loading-message">
+              <div className="loading-spinner"></div>
+              <p>HTMLをスクレイピング中...</p>
+            </div>
+          )}
+
           {loading && (
             <div className="loading-message">
               <div className="loading-spinner"></div>
-              <p>処理中...</p>
+              <p>データを解析中...</p>
             </div>
           )}
 
           {parsedData && !loading && (
             <div className="result-container">
+              <div className="result-summary">
+                <h3>{parsedData.summary}</h3>
+                <p>行数: {parsedData.line_count} | 文字数: {parsedData.char_count}</p>
+              </div>
               <pre className="result-display">
-                {JSON.stringify(parsedData, null, 2)}
+                {parsedData.data.join('\n')}
               </pre>
             </div>
           )}

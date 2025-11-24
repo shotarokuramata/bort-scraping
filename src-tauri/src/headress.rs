@@ -4,6 +4,33 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+/// 指定されたURLからHTMLコンテンツをスクレイピングする汎用関数
+pub fn scrape_html_from_url(url: &str) -> Result<String, Box<dyn std::error::Error>> {
+    println!("=== URLからHTMLスクレイピング開始 ===");
+    println!("URL: {}", url);
+
+    // ブラウザを起動
+    let browser = Browser::new(LaunchOptions::default())?;
+    let tab = browser.new_tab()?;
+
+    // URLに移動
+    tab.navigate_to(url)?.wait_until_navigated()?;
+
+    // ページの読み込みを待つ（最大5秒）
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
+    // ページのHTMLコンテンツを取得
+    let content = tab.get_content()?;
+
+    println!("HTML取得成功: {} bytes", content.len());
+
+    // ブラウザを閉じる
+    drop(tab);
+    drop(browser);
+
+    Ok(content)
+}
+
 pub fn fetch_shusso_info_from_kyoteibiyori(
     race_no: u32,
     place_no: u32,

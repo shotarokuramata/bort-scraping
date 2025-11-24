@@ -9,6 +9,7 @@ mod parse {
         pub mod table_analyzer;
     }
     pub mod official;
+    pub mod table;
 }
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -721,6 +722,22 @@ fn clear_all_stored_data() -> Result<(), String> {
     database::clear_all_data().map_err(|e| format!("データベースクリアエラー: {}", e))
 }
 
+#[tauri::command]
+fn parse_table(input_data: &str) -> Result<parse::table::ParsedTableData, String> {
+    parse::table::parse_table_data(input_data)
+}
+
+#[tauri::command]
+async fn scrape_html_from_url(url: String) -> Result<String, String> {
+    // 重い処理を別スレッドで実行
+    tokio::task::spawn_blocking(move || {
+        headress::scrape_html_from_url(&url)
+            .map_err(|e| format!("スクレイピングエラー: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task execution error: {}", e))?
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -740,7 +757,9 @@ pub fn run() {
             get_odds_data_from_db,
             get_all_stored_race_keys,
             delete_race_data_from_db,
-            clear_all_stored_data
+            clear_all_stored_data,
+            parse_table,
+            scrape_html_from_url
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

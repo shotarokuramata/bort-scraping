@@ -406,7 +406,6 @@ fn extract_player_basic_info(document: &Html) -> Result<PlayerBasicInfo, Box<dyn
     let race_member_names2_selector = Selector::parse("#raceMemerNames2").unwrap();
     let table_selector = Selector::parse("table").unwrap();
     let row_selector = Selector::parse("tr").unwrap();
-    let cell_selector = Selector::parse("td").unwrap();
     let course1_selector = Selector::parse("td.course1").unwrap();
 
     let mut player_info = PlayerBasicInfo::new();
@@ -496,7 +495,6 @@ fn extract_detailed_performance_data(document: &Html) -> Result<DetailedPerforma
     let race_basic_selector = Selector::parse("#raceBasic").unwrap();
     let table_selector = Selector::parse("table.table_fixed").unwrap();
     let row_selector = Selector::parse("tr").unwrap();
-    let cell_selector = Selector::parse("td").unwrap();
 
     let race_basic = document
         .select(&race_basic_selector)
@@ -1383,8 +1381,8 @@ pub fn parse_odds_from_html(html_content: &str) -> Result<OddsData, Box<dyn std:
 
 // テーブルの位置から組み合わせを推定するヘルパー関数
 fn parse_combination_from_position(
-    row_idx: usize,
-    cell_idx: usize, 
+    _row_idx: usize,
+    _cell_idx: usize,
     cells: &[scraper::ElementRef]
 ) -> Option<(u8, u8, Option<u8>)> {
     // この実装は簡略化されています
