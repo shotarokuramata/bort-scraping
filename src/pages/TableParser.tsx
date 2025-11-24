@@ -59,10 +59,14 @@ function TableParser() {
   const transposeTable = (table: TableWithHeaderAndValues): string[][] => {
     const result: string[][] = [];
 
-    // 最初の列（ヘッダーの最初の要素）は単独で出力
-    if (table.headers.length > 0) {
-      result.push([table.headers[0]]);
+    // 最初の行：ヘッダーの最初の要素 + 各データ行の最初の列
+    const firstRow = [table.headers[0]];
+    for (const dataRow of table.rows) {
+      if (dataRow.length > 0) {
+        firstRow.push(dataRow[0]);
+      }
     }
+    result.push(firstRow);
 
     // 2列目以降を転置して出力
     for (let colIndex = 1; colIndex < table.headers.length; colIndex++) {
