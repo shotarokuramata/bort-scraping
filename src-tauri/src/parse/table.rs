@@ -68,7 +68,8 @@ pub fn parse_table_data(input: &str) -> Result<ParsedTableData, String> {
 
 fn get_tables_from_html_string(str: &str) -> Result<Vec<String>, String> {
     let html = Html::parse_document(str);
-    let table_selector = Selector::parse("table.table_fixed").unwrap();
+    // シンプルに全てのtableタグを取得（汎用的アプローチ）
+    let table_selector = Selector::parse("table").unwrap();
     let tables: Vec<String> = html
         .select(&table_selector)
         .map(|element| element.html())
@@ -77,6 +78,7 @@ fn get_tables_from_html_string(str: &str) -> Result<Vec<String>, String> {
         return Err("table not found".to_string());
     }
 
+    println!("✅ {} 個のテーブルを検出しました", tables.len());
     return Ok(tables);
 }
 
@@ -230,9 +232,10 @@ mod tests {
     }
 
     #[test]
+    // デバッグ用に結果を表示する。テストは固定ファイルを対象にしているので基本的に成功する
     fn test_parse_tables_header_and_values() {
         let file_path =
-            "/home/shotarokuramata/bort-scraping/src-tauri/bort-html/20250802/biyori.html";
+            "/home/shotarokuramata/bort-scraping/src-tauri/bort-html/racelist_test_20251125.html";
         let input = fs::read_to_string(file_path);
         let s = input.unwrap();
 
