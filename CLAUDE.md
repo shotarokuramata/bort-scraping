@@ -58,13 +58,49 @@ cargo test headress::tests::test_fetch_win_place_odds_from_kyoteibiyori -- --noc
 - **Tauri API**: Rustバックエンドとの通信
 - **Vite**: バンドラー
 
-### バックエンド構成（Rust）
-- **lib.rs**: Tauriコマンドの定義とメインアプリケーション
-- **headress.rs**: headless_chromeを使用したスクレイピング機能
+### バックエンド構成（Rust）- レイヤードアーキテクチャ
+
+**アーキテクチャ概要:**
+```
+Commands層 → Services層 → Repositories層
+                ↓
+            Models層（共通データ構造）
+```
+
+**ディレクトリ構成:**
+- **lib.rs** (~96行): Tauriエントリーポイント、コマンド登録のみ
+- **commands/**: Tauri コマンド層（薄いラッパー、パラメータ検証のみ）
+  - `schedule.rs`: スケジュール関連コマンド（3コマンド）
+  - `scraping.rs`: スクレイピング関連コマンド（5コマンド）
+  - `storage.rs`: データベース操作コマンド（7コマンド）
+  - `utils.rs`: ユーティリティコマンド（2コマンド）
+- **services/**: ビジネスロジック層
+  - `schedule_service.rs`: 公式スケジュール取得・処理
+  - `scraping_service.rs`: スクレイピング + キャッシュ戦略
+  - `storage_service.rs`: データ永続化ロジック
+- **repositories/**: データアクセス層
+  - `local_db.rs`: norimaki-db を使用したローカルKVストア
+- **models/**: 共通データ構造
+  - `race.rs`: RaceData, OddsData, BulkRaceData等
+  - `venue.rs`: RaceVenue, VenueStatus等
 - **parse/**: サイト別のHTMLパース機能
   - `biyori/flame.rs`: 競艇日和サイトのレースデータ解析
   - `official.rs`: 公式サイト用パーサー
-- **fetch.rs**: HTTP リクエスト処理（現在コメントアウト）
+  - `table.rs`: テーブル解析ユーティリティ
+- **headress.rs**: headless_chromeを使用したスクレイピング機能
+- **fetcher.rs**: HTTP リクエスト処理
+
+**各層の責務:**
+- **Commands層**: Tauriコマンド定義のみ。パラメータ検証後、Servicesに委譲（5-15行/コマンド）
+- **Services層**: ビジネスロジック実装。キャッシュ戦略、進捗通知、エラーハンドリング
+- **Repositories層**: データアクセス抽象化。将来的にRDS実装を追加可能
+- **Models層**: 共通データ構造。ビジネスロジックなし
+
+**設計の利点:**
+- 責務の明確な分離で保守性向上
+- テストの容易さ向上（各層を独立してテスト可能）
+- 新機能（RDS同期等）の追加が容易
+- lib.rs が 777行→96行に削減（87.6%削減）
 
 ### 主要な依存関係
 - **headless_chrome**: ブラウザ自動化とスクレイピング

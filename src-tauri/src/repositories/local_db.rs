@@ -1,5 +1,5 @@
 use norimaki_db::{FileStore, KeyValueStore, serialize_to_string, deserialize_from_string, Result};
-use crate::parse::biyori::flame::{RaceData, BulkRaceData, OddsData};
+use crate::models::race::{RaceData, BulkRaceData, OddsData};
 use std::sync::Mutex;
 
 static DB: Mutex<Option<FileStore>> = Mutex::new(None);
@@ -14,135 +14,151 @@ fn get_db() -> Result<&'static Mutex<Option<FileStore>>> {
     Ok(&DB)
 }
 
-pub fn save_race_data(
-    date: &str,
-    place_number: u32,
-    race_number: u32,
-    race_data: &RaceData,
-) -> Result<()> {
-    let db_lock = get_db()?;
-    let mut db_guard = db_lock.lock().unwrap();
-    let db = db_guard.as_mut().unwrap();
-    
-    let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "data");
-    let value = serialize_to_string(race_data)?;
-    
-    db.put(key, value)
-}
+/// Local database repository using norimaki-db
+pub struct LocalDbRepository;
 
-pub fn get_race_data(
-    date: &str,
-    place_number: u32,
-    race_number: u32,
-) -> Result<Option<RaceData>> {
-    let db_lock = get_db()?;
-    let db_guard = db_lock.lock().unwrap();
-    let db = db_guard.as_ref().unwrap();
-    
-    let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "data");
-    
-    match db.get(&key)? {
-        Some(value) => {
-            let race_data: RaceData = deserialize_from_string(&value)?;
-            Ok(Some(race_data))
-        }
-        None => Ok(None)
+impl LocalDbRepository {
+    pub fn new() -> Result<Self> {
+        // Initialize DB
+        get_db()?;
+        Ok(LocalDbRepository)
     }
-}
 
-pub fn save_odds_data(
-    date: &str,
-    place_number: u32,
-    race_number: u32,
-    odds_data: &OddsData,
-) -> Result<()> {
-    let db_lock = get_db()?;
-    let mut db_guard = db_lock.lock().unwrap();
-    let db = db_guard.as_mut().unwrap();
-    
-    let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "odds");
-    let value = serialize_to_string(odds_data)?;
-    
-    db.put(key, value)
-}
+    pub fn save_race_data(
+        &self,
+        date: &str,
+        place_number: u32,
+        race_number: u32,
+        race_data: &RaceData,
+    ) -> Result<()> {
+        let db_lock = get_db()?;
+        let mut db_guard = db_lock.lock().unwrap();
+        let db = db_guard.as_mut().unwrap();
 
-pub fn get_odds_data(
-    date: &str,
-    place_number: u32,
-    race_number: u32,
-) -> Result<Option<OddsData>> {
-    let db_lock = get_db()?;
-    let db_guard = db_lock.lock().unwrap();
-    let db = db_guard.as_ref().unwrap();
-    
-    let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "odds");
-    
-    match db.get(&key)? {
-        Some(value) => {
-            let odds_data: OddsData = deserialize_from_string(&value)?;
-            Ok(Some(odds_data))
-        }
-        None => Ok(None)
+        let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "data");
+        let value = serialize_to_string(race_data)?;
+
+        db.put(key, value)
     }
-}
 
-pub fn save_bulk_race_data(bulk_data: &[BulkRaceData]) -> Result<()> {
-    for data in bulk_data {
-        if let Some(race_data) = &data.race_data {
-            save_race_data(&data.date, data.place_number, data.race_number, race_data)?;
-        }
-        if let Some(odds_data) = &data.win_place_odds_data {
-            save_odds_data(&data.date, data.place_number, data.race_number, odds_data)?;
+    pub fn get_race_data(
+        &self,
+        date: &str,
+        place_number: u32,
+        race_number: u32,
+    ) -> Result<Option<RaceData>> {
+        let db_lock = get_db()?;
+        let db_guard = db_lock.lock().unwrap();
+        let db = db_guard.as_ref().unwrap();
+
+        let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "data");
+
+        match db.get(&key)? {
+            Some(value) => {
+                let race_data: RaceData = deserialize_from_string(&value)?;
+                Ok(Some(race_data))
+            }
+            None => Ok(None)
         }
     }
-    Ok(())
-}
 
-pub fn get_all_race_keys() -> Result<Vec<String>> {
-    let db_lock = get_db()?;
-    let db_guard = db_lock.lock().unwrap();
-    let db = db_guard.as_ref().unwrap();
-    
-    let all_keys = db.keys()?;
-    let race_keys: Vec<String> = all_keys
-        .into_iter()
-        .filter(|key| key.contains("race_") && (key.ends_with("_data") || key.ends_with("_odds")))
-        .collect();
-    
-    Ok(race_keys)
-}
+    pub fn save_odds_data(
+        &self,
+        date: &str,
+        place_number: u32,
+        race_number: u32,
+        odds_data: &OddsData,
+    ) -> Result<()> {
+        let db_lock = get_db()?;
+        let mut db_guard = db_lock.lock().unwrap();
+        let db = db_guard.as_mut().unwrap();
 
-pub fn delete_race_data(
-    date: &str,
-    place_number: u32,
-    race_number: u32,
-) -> Result<()> {
-    let db_lock = get_db()?;
-    let mut db_guard = db_lock.lock().unwrap();
-    let db = db_guard.as_mut().unwrap();
-    
-    let data_key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "data");
-    let odds_key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "odds");
-    
-    // データが存在しなくてもエラーにしない
-    let _ = db.delete(&data_key);
-    let _ = db.delete(&odds_key);
-    
-    Ok(())
-}
+        let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "odds");
+        let value = serialize_to_string(odds_data)?;
 
-pub fn clear_all_data() -> Result<()> {
-    let db_lock = get_db()?;
-    let mut db_guard = db_lock.lock().unwrap();
-    let db = db_guard.as_mut().unwrap();
-    
-    db.clear()
+        db.put(key, value)
+    }
+
+    pub fn get_odds_data(
+        &self,
+        date: &str,
+        place_number: u32,
+        race_number: u32,
+    ) -> Result<Option<OddsData>> {
+        let db_lock = get_db()?;
+        let db_guard = db_lock.lock().unwrap();
+        let db = db_guard.as_ref().unwrap();
+
+        let key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "odds");
+
+        match db.get(&key)? {
+            Some(value) => {
+                let odds_data: OddsData = deserialize_from_string(&value)?;
+                Ok(Some(odds_data))
+            }
+            None => Ok(None)
+        }
+    }
+
+    pub fn save_bulk_race_data(&self, bulk_data: &[BulkRaceData]) -> Result<()> {
+        for data in bulk_data {
+            if let Some(race_data) = &data.race_data {
+                self.save_race_data(&data.date, data.place_number, data.race_number, race_data)?;
+            }
+            if let Some(odds_data) = &data.win_place_odds_data {
+                self.save_odds_data(&data.date, data.place_number, data.race_number, odds_data)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn get_all_race_keys(&self) -> Result<Vec<String>> {
+        let db_lock = get_db()?;
+        let db_guard = db_lock.lock().unwrap();
+        let db = db_guard.as_ref().unwrap();
+
+        let all_keys = db.keys()?;
+        let race_keys: Vec<String> = all_keys
+            .into_iter()
+            .filter(|key| key.contains("race_") && (key.ends_with("_data") || key.ends_with("_odds")))
+            .collect();
+
+        Ok(race_keys)
+    }
+
+    pub fn delete_race_data(
+        &self,
+        date: &str,
+        place_number: u32,
+        race_number: u32,
+    ) -> Result<()> {
+        let db_lock = get_db()?;
+        let mut db_guard = db_lock.lock().unwrap();
+        let db = db_guard.as_mut().unwrap();
+
+        let data_key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "data");
+        let odds_key = format!("race_{}_{}_{}_{}", date, place_number, race_number, "odds");
+
+        // データが存在しなくてもエラーにしない
+        let _ = db.delete(&data_key);
+        let _ = db.delete(&odds_key);
+
+        Ok(())
+    }
+
+    pub fn clear_all_data(&self) -> Result<()> {
+        let db_lock = get_db()?;
+        let mut db_guard = db_lock.lock().unwrap();
+        let db = db_guard.as_mut().unwrap();
+
+        db.clear()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::biyori::flame::*;
+    use crate::models::race::*;
 
     fn create_sample_race_data() -> RaceData {
         RaceData {
@@ -246,102 +262,93 @@ mod tests {
 
     #[test]
     fn test_save_and_get_race_data() {
-        // テスト用のデータを作成
+        let repo = LocalDbRepository::new().unwrap();
         let race_data = create_sample_race_data();
-        
-        // データを保存
-        let save_result = save_race_data("2025-09-15", 1, 1, &race_data);
+
+        let save_result = repo.save_race_data("2025-09-15", 1, 1, &race_data);
         assert!(save_result.is_ok(), "Failed to save race data: {:?}", save_result.err());
-        
-        // データを取得
-        let get_result = get_race_data("2025-09-15", 1, 1);
+
+        let get_result = repo.get_race_data("2025-09-15", 1, 1);
         assert!(get_result.is_ok(), "Failed to get race data: {:?}", get_result.err());
-        
+
         let retrieved_data = get_result.unwrap();
         assert!(retrieved_data.is_some(), "No data retrieved");
-        
+
         let retrieved_race_data = retrieved_data.unwrap();
         assert_eq!(retrieved_race_data.player_basic_info.name, "テスト選手");
         assert_eq!(retrieved_race_data.escape_last_year, 50.5);
-        
+
         println!("✅ Race data save/get test passed");
     }
 
     #[test]
     fn test_save_and_get_odds_data() {
-        // テスト用のオッズデータを作成
+        let repo = LocalDbRepository::new().unwrap();
         let odds_data = create_sample_odds_data();
-        
-        // データを保存
-        let save_result = save_odds_data("2025-09-15", 1, 1, &odds_data);
+
+        let save_result = repo.save_odds_data("2025-09-15", 1, 1, &odds_data);
         assert!(save_result.is_ok(), "Failed to save odds data: {:?}", save_result.err());
-        
-        // データを取得
-        let get_result = get_odds_data("2025-09-15", 1, 1);
+
+        let get_result = repo.get_odds_data("2025-09-15", 1, 1);
         assert!(get_result.is_ok(), "Failed to get odds data: {:?}", get_result.err());
-        
+
         let retrieved_data = get_result.unwrap();
         assert!(retrieved_data.is_some(), "No odds data retrieved");
-        
+
         let retrieved_odds_data = retrieved_data.unwrap();
         assert_eq!(retrieved_odds_data.betting_type, BettingType::WinPlace);
         assert_eq!(retrieved_odds_data.combinations.len(), 2);
         assert_eq!(retrieved_odds_data.combinations[0].odds, 2.5);
-        
+
         println!("✅ Odds data save/get test passed");
     }
 
     #[test]
     fn test_get_all_race_keys() {
-        // いくつかのデータを保存
+        let repo = LocalDbRepository::new().unwrap();
         let race_data = create_sample_race_data();
         let odds_data = create_sample_odds_data();
-        
-        let _ = save_race_data("2025-09-15", 1, 1, &race_data);
-        let _ = save_race_data("2025-09-15", 1, 2, &race_data);
-        let _ = save_odds_data("2025-09-15", 1, 1, &odds_data);
-        
-        // キー一覧を取得
-        let keys_result = get_all_race_keys();
+
+        let _ = repo.save_race_data("2025-09-15", 1, 1, &race_data);
+        let _ = repo.save_race_data("2025-09-15", 1, 2, &race_data);
+        let _ = repo.save_odds_data("2025-09-15", 1, 1, &odds_data);
+
+        let keys_result = repo.get_all_race_keys();
         assert!(keys_result.is_ok(), "Failed to get race keys: {:?}", keys_result.err());
-        
+
         let keys = keys_result.unwrap();
         assert!(keys.len() >= 3, "Expected at least 3 keys, got {}", keys.len());
-        
-        // 期待されるキーが含まれているか確認
+
         let has_data_key = keys.iter().any(|k| k.contains("race_2025-09-15_1_1_data"));
         let has_odds_key = keys.iter().any(|k| k.contains("race_2025-09-15_1_1_odds"));
-        
+
         assert!(has_data_key, "Race data key not found in: {:?}", keys);
         assert!(has_odds_key, "Odds data key not found in: {:?}", keys);
-        
+
         println!("✅ Get all race keys test passed. Found {} keys", keys.len());
     }
 
     #[test]
     fn test_delete_race_data() {
-        // データを保存
+        let repo = LocalDbRepository::new().unwrap();
         let race_data = create_sample_race_data();
         let odds_data = create_sample_odds_data();
-        
-        let _ = save_race_data("2025-09-15", 2, 1, &race_data);
-        let _ = save_odds_data("2025-09-15", 2, 1, &odds_data);
-        
-        // データが存在することを確認
-        let get_result = get_race_data("2025-09-15", 2, 1);
+
+        let _ = repo.save_race_data("2025-09-15", 2, 1, &race_data);
+        let _ = repo.save_odds_data("2025-09-15", 2, 1, &odds_data);
+
+        let get_result = repo.get_race_data("2025-09-15", 2, 1);
         assert!(get_result.unwrap().is_some(), "Data should exist before deletion");
-        
-        // データを削除
-        let delete_result = delete_race_data("2025-09-15", 2, 1);
+
+        let delete_result = repo.delete_race_data("2025-09-15", 2, 1);
         assert!(delete_result.is_ok(), "Failed to delete race data: {:?}", delete_result.err());
-        
-        // データが削除されたことを確認
-        let get_after_delete = get_race_data("2025-09-15", 2, 1);
+
+        let get_after_delete = repo.get_race_data("2025-09-15", 2, 1);
         assert!(get_after_delete.unwrap().is_none(), "Data should be deleted");
-        
-        let get_odds_after_delete = get_odds_data("2025-09-15", 2, 1);
+
+        let get_odds_after_delete = repo.get_odds_data("2025-09-15", 2, 1);
         assert!(get_odds_after_delete.unwrap().is_none(), "Odds data should be deleted");
-        
+
         println!("✅ Delete race data test passed");
     }
 }
