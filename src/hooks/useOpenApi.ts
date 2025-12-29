@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { DataType, OpenApiState } from "../types/OpenApiData";
+import { DataType, OpenApiState, PayoutType, RaceResult, PayoutStats, SearchState, StatsState } from "../types/OpenApiData";
 
 export const useOpenApi = () => {
   const [state, setState] = useState<OpenApiState>({
@@ -20,18 +20,19 @@ export const useOpenApi = () => {
     exportError: null,
   });
 
-  // サービス初期化（バックエンドでデフォルトパスを使用）
-  useEffect(() => {
-    const initService = async () => {
-      try {
-        await invoke("init_open_api_service");
-        console.log("Open API service initialized");
-      } catch (error) {
-        console.error("Failed to initialize Open API service:", error);
-      }
-    };
-    initService();
-  }, []);
+  // 高配当検索用のstate
+  const [searchState, setSearchState] = useState<SearchState>({
+    status: "idle",
+    results: [],
+    error: null,
+  });
+
+  // 統計情報用のstate
+  const [statsState, setStatsState] = useState<StatsState>({
+    status: "idle",
+    stats: null,
+    error: null,
+  });
 
   // 日付をYYYYMMDD形式に変換
   function formatDate(date: Date): string {
@@ -149,14 +150,94 @@ export const useOpenApi = () => {
     }
   };
 
+  // 高配当レース検索
+  const searchHighPayoutRaces = async (
+    minPayout: number,
+    payoutType: PayoutType,
+    limit?: number
+  ) => {
+    setSearchState({
+      status: "loading",
+      results: [],
+      error: null,
+    });
+
+    try {
+      const results = await invoke<RaceResult[]>("search_high_payout_races", {
+        minPayout,
+        payoutType,
+        limit: limit || 100,
+      });
+
+      console.log(`Found ${results.length} high payout races`);
+
+      setSearchState({
+        status: "success",
+        results,
+        error: null,
+      });
+
+      return results;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Failed to search high payout races:", errorMessage);
+
+      setSearchState({
+        status: "error",
+        results: [],
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  };
+
+  // 配当統計情報取得
+  const getPayoutStatistics = async () => {
+    setStatsState({
+      status: "loading",
+      stats: null,
+      error: null,
+    });
+
+    try {
+      const stats = await invoke<PayoutStats>("get_payout_statistics");
+
+      console.log("Payout statistics:", stats);
+
+      setStatsState({
+        status: "success",
+        stats,
+        error: null,
+      });
+
+      return stats;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Failed to get payout statistics:", errorMessage);
+
+      setStatsState({
+        status: "error",
+        stats: null,
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  };
+
   return {
     date: state.date,
     status: state.status,
     error: state.error,
     exportStatus: state.exportStatus,
     exportError: state.exportError,
+    searchState,
+    statsState,
     setDate,
     fetchData,
     exportToCsv,
+    searchHighPayoutRaces,
+    getPayoutStatistics,
   };
 };

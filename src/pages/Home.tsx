@@ -34,6 +34,17 @@ function Home() {
               <li>CSV形式でエクスポート</li>
             </ul>
           </Link>
+
+          <Link to="/high-payout-search" className="menu-card">
+            <div className="card-icon">💰</div>
+            <h2>高配当レース検索</h2>
+            <p>高配当のレース結果を検索して分析します</p>
+            <ul className="feature-list">
+              <li>3連単・2連単・単勝・複勝の高配当検索</li>
+              <li>配当統計情報の表示</li>
+              <li>レース条件と配当の分析</li>
+            </ul>
+          </Link>
         </div>
       </div>
     </div>

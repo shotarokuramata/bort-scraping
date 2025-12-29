@@ -21,3 +21,65 @@ export interface OpenApiState {
   exportStatus: "idle" | "loading" | "success" | "error";
   exportError: string | null;
 }
+
+// 高配当検索用の型定義
+
+export type PayoutType = "win" | "trifecta" | "exacta" | "place";
+
+export interface PayoutEntry {
+  combination?: string;
+  payout?: number;
+}
+
+export interface PayoutInfo {
+  win?: PayoutEntry[];
+  place?: PayoutEntry[];
+  exacta?: PayoutEntry[];
+  quinella?: PayoutEntry[];
+  quinella_place?: PayoutEntry[];
+  trifecta?: PayoutEntry[];
+  trio?: PayoutEntry[];
+}
+
+export interface ResultRacerInfo {
+  racer_boat_number: number;
+  racer_course_number?: number;
+  racer_start_timing?: number;
+  racer_place_number?: number;
+  racer_number?: number;
+  racer_name?: string;
+}
+
+export interface RaceResult {
+  race_date: string;
+  race_stadium_number: number;
+  race_number: number;
+  race_wind?: number;
+  race_wind_direction_number?: number;
+  race_wave?: number;
+  race_weather_number?: number;
+  race_temperature?: number;
+  race_water_temperature?: number;
+  race_technique_number?: number;
+  boats: ResultRacerInfo[];
+  payouts: PayoutInfo;
+}
+
+export interface PayoutStats {
+  avg_trifecta?: number;
+  max_trifecta?: number;
+  avg_win?: number;
+  max_win?: number;
+}
+
+export interface SearchState {
+  status: "idle" | "loading" | "success" | "error";
+  results: RaceResult[];
+  error: string | null;
+}
+
+export interface StatsState {
+  status: "idle" | "loading" | "success" | "error";
+  stats: PayoutStats | null;
+  error: string | null;
+}
