@@ -15,7 +15,6 @@ const OpenApiTool = () => {
   } = useOpenApi();
 
   const [selectedExportType, setSelectedExportType] = useState<DataType | "all">("all");
-  const [exportPath, setExportPath] = useState("data/export.csv");
 
   // 日付変更ハンドラー
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,7 +44,7 @@ const OpenApiTool = () => {
 
   // エクスポートハンドラー
   const handleExport = () => {
-    exportToCsv(selectedExportType, exportPath);
+    exportToCsv(selectedExportType);
   };
 
   return (
@@ -160,25 +159,6 @@ const OpenApiTool = () => {
           </select>
         </div>
 
-        <div style={{ marginBottom: "15px" }}>
-          <label style={{ display: "block", marginBottom: "5px" }}>
-            出力ファイル名:
-          </label>
-          <input
-            type="text"
-            value={exportPath}
-            onChange={(e) => setExportPath(e.target.value)}
-            placeholder="data/export.csv"
-            style={{
-              padding: "8px",
-              fontSize: "16px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              minWidth: "300px",
-            }}
-          />
-        </div>
-
         <button
           onClick={handleExport}
           disabled={exportStatus === "loading"}
@@ -193,13 +173,13 @@ const OpenApiTool = () => {
             opacity: exportStatus === "loading" ? 0.6 : 1,
           }}
         >
-          {exportStatus === "loading" ? "出力中..." : "CSV 出力"}
+          {exportStatus === "loading" ? "出力中..." : "保存先を選択して CSV 出力"}
         </button>
 
         {/* エクスポートステータス */}
         {exportStatus === "success" && (
           <div style={{ marginTop: "10px", color: "#4CAF50" }}>
-            ✅ CSV出力が完了しました
+            ✅ CSV出力が完了しました（選択した場所に保存されました）
           </div>
         )}
         {exportStatus === "error" && (

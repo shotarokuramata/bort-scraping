@@ -189,7 +189,7 @@ mod tests {
             }
             Err(e) => {
                 eprintln!("エラーが発生しました: {}", e);
-                assert!(false, "エラーが発生したよ～！");
+                panic!("エラーが発生したよ～！");
             }
         }
     }

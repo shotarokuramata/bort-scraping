@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import { DataType, OpenApiState } from "../types/OpenApiData";
 
 export const useOpenApi = () => {
@@ -95,7 +96,7 @@ export const useOpenApi = () => {
   };
 
   // CSV エクスポート
-  const exportToCsv = async (dataType: DataType | "all", outputPath: string) => {
+  const exportToCsv = async (dataType: DataType | "all") => {
     setState((prev) => ({
       ...prev,
       exportStatus: "loading",
@@ -103,13 +104,34 @@ export const useOpenApi = () => {
     }));
 
     try {
+      // ファイル保存ダイアログを表示
+      const filePath = await save({
+        defaultPath: "export.csv",
+        filters: [
+          {
+            name: "CSV",
+            extensions: ["csv"],
+          },
+        ],
+      });
+
+      // ユーザーがキャンセルした場合
+      if (!filePath) {
+        setState((prev) => ({
+          ...prev,
+          exportStatus: "idle",
+        }));
+        return;
+      }
+
+      // エクスポート実行
       const dataTypeParam = dataType === "all" ? null : dataType;
       const count = await invoke<number>("export_open_api_to_csv", {
-        outputPath,
+        outputPath: filePath,
         dataType: dataTypeParam,
       });
 
-      console.log(`Exported ${count} records to CSV`);
+      console.log(`Exported ${count} records to CSV: ${filePath}`);
 
       setState((prev) => ({
         ...prev,

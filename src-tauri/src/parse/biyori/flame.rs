@@ -1106,18 +1106,16 @@ mod odds_tests {
                 for combination in &odds_data.combinations {
                     if combination.second == 0 {
                         println!("{}号艇 単勝: {:.1}倍", combination.first, combination.odds);
+                    } else if let Some(range) = &combination.range_text {
+                        println!("{}号艇 複勝: {}倍", combination.first, range);
                     } else {
-                        if let Some(range) = &combination.range_text {
-                            println!("{}号艇 複勝: {}倍", combination.first, range);
-                        } else {
-                            println!("{}号艇 複勝: {:.1}倍（平均）", combination.first, combination.odds);
-                        }
+                        println!("{}号艇 複勝: {:.1}倍（平均）", combination.first, combination.odds);
                     }
                 }
                 
                 // 基本的な検証
                 assert_eq!(odds_data.betting_type, BettingType::WinPlace);
-                assert!(odds_data.combinations.len() > 0, "オッズデータが空です");
+                assert!(!odds_data.combinations.is_empty(), "オッズデータが空です");
                 assert!(odds_data.combinations.len() <= 12, "オッズ数が異常です（6艇×2種類=最大12個）");
                 
                 println!("✅ 単勝・複勝オッズ解析テスト完了");
