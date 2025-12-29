@@ -1,3 +1,4 @@
+pub mod open_api;
 pub mod race;
 pub mod venue;
 

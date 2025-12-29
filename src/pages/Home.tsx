@@ -23,6 +23,17 @@ function Home() {
               <li>一括データ取得</li>
             </ul>
           </Link>
+
+          <Link to="/open-api" className="menu-card">
+            <div className="card-icon">🗄️</div>
+            <h2>Open API データ管理</h2>
+            <p>Boatrace Open APIからデータを取得してデータベースに保存します</p>
+            <ul className="feature-list">
+              <li>Previews / Results / Programs 取得</li>
+              <li>SQLiteデータベース保存</li>
+              <li>CSV形式でエクスポート</li>
+            </ul>
+          </Link>
         </div>
       </div>
     </div>

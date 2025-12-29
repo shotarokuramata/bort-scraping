@@ -22,6 +22,7 @@ pub use models::venue::*;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(commands::OpenApiServiceState::default())
         .invoke_handler(tauri::generate_handler![
             // Utils
             commands::greet,
@@ -42,7 +43,16 @@ pub fn run() {
             commands::get_odds_data_from_db,
             commands::get_all_stored_race_keys,
             commands::delete_race_data_from_db,
-            commands::clear_all_stored_data
+            commands::clear_all_stored_data,
+            // Open API
+            commands::init_open_api_service,
+            commands::fetch_previews_data,
+            commands::fetch_results_data,
+            commands::fetch_programs_data,
+            commands::save_previews_to_db,
+            commands::save_results_to_db,
+            commands::save_programs_to_db,
+            commands::export_open_api_to_csv
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
