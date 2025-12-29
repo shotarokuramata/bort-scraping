@@ -52,7 +52,10 @@ pub fn run() {
             commands::save_previews_to_db,
             commands::save_results_to_db,
             commands::save_programs_to_db,
-            commands::export_open_api_to_csv
+            commands::export_open_api_to_csv,
+            // Open API - 高配当検索
+            commands::search_high_payout_races,
+            commands::get_payout_statistics
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -61,6 +64,21 @@ pub fn run() {
 // Tests
 #[cfg(test)]
 mod tests {
+    use crate::services::open_api_service::OpenApiService;
+
+    // ===== V2マイグレーションテスト =====
+
+    #[tokio::test]
+    async fn test_v2_migration_execution() {
+        println!("🔄 Testing V2 migration...");
+
+        // OpenApiServiceを初期化するとマイグレーションが実行される
+        let service = OpenApiService::new(Some("data/open_api.db")).await;
+
+        assert!(service.is_ok(), "Service initialization should succeed");
+        println!("✅ V2 migration test passed");
+    }
+
     // ===== パラメータ検証テスト =====
 
     #[tokio::test]
@@ -98,3 +116,57 @@ mod tests {
         println!("✅ 日付パース検証ロジック成功");
     }
 }
+
+    // ===== 高配当検索テスト =====
+
+    #[tokio::test]
+    async fn test_search_high_payout_races() {
+        use crate::services::open_api_service::OpenApiService;
+
+        println!("🔍 Testing high payout search...");
+
+        let service = OpenApiService::new(Some("data/open_api.db")).await
+            .expect("Failed to initialize service");
+
+        // 3連単配当100,000円以上のレースを検索
+        let results = service.search_high_payout_races(100000, "trifecta".to_string(), Some(5)).await
+            .expect("Failed to search high payout races");
+
+        assert!(results.len() > 0, "Should find at least one high payout race");
+        println!("✅ Found {} high payout races (trifecta >= 100,000)", results.len());
+
+        for (i, result) in results.iter().enumerate() {
+            let trifecta_payout = result.payouts.trifecta
+                .as_ref()
+                .and_then(|entries| entries.first())
+                .and_then(|e| e.payout)
+                .unwrap_or(0);
+            println!("  {}. Date: {}, Venue: {:02}, Race: {}, Payout: ¥{}", 
+                i + 1, result.race_date, result.race_stadium_number, result.race_number, trifecta_payout);
+        }
+
+        println!("✅ High payout search test passed");
+    }
+
+    #[tokio::test]
+    async fn test_get_payout_statistics() {
+        use crate::services::open_api_service::OpenApiService;
+
+        println!("📊 Testing payout statistics...");
+
+        let service = OpenApiService::new(Some("data/open_api.db")).await
+            .expect("Failed to initialize service");
+
+        let stats = service.get_payout_statistics().await
+            .expect("Failed to get payout statistics");
+
+        println!("  Average trifecta: ¥{:.2}", stats.avg_trifecta.unwrap_or(0.0));
+        println!("  Max trifecta: ¥{}", stats.max_trifecta.unwrap_or(0));
+        println!("  Average win: ¥{:.2}", stats.avg_win.unwrap_or(0.0));
+        println!("  Max win: ¥{}", stats.max_win.unwrap_or(0));
+
+        assert!(stats.max_trifecta.is_some(), "Should have max trifecta payout");
+        assert!(stats.avg_trifecta.is_some(), "Should have average trifecta payout");
+
+        println!("✅ Payout statistics test passed");
+    }

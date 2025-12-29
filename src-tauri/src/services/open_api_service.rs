@@ -1,6 +1,6 @@
 use crate::models::open_api::{
-    ApiDataType, CsvExportRow, PreviewRecord, PreviewsResponse, ProgramRecord, ProgramsResponse,
-    ResultRecord, ResultsResponse,
+    ApiDataType, CsvExportRow, PayoutStats, PreviewRecord, PreviewsResponse, ProgramRecord,
+    ProgramsResponse, RaceResult, ResultRecord, ResultsResponse,
 };
 use crate::repositories::sqlite_db::SqliteRepository;
 use chrono::Utc;
@@ -305,5 +305,32 @@ impl OpenApiService {
 
         println!("✅ Exported {} rows to CSV", rows.len());
         Ok(rows.len())
+    }
+
+    // ===== 高配当検索機能 =====
+
+    /// 高配当レース検索
+    pub async fn search_high_payout_races(
+        &self,
+        min_payout: i32,
+        payout_type: String,
+        limit: Option<i32>,
+    ) -> Result<Vec<RaceResult>, String> {
+        let records = self.repository
+            .search_high_payout_races(min_payout, &payout_type, limit)
+            .await
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        records.into_iter()
+            .map(|r| serde_json::from_str(&r.data_json)
+                .map_err(|e| format!("JSON parse error: {}", e)))
+            .collect()
+    }
+
+    /// 配当統計情報取得
+    pub async fn get_payout_statistics(&self) -> Result<PayoutStats, String> {
+        self.repository.get_payout_statistics()
+            .await
+            .map_err(|e| format!("Database error: {}", e))
     }
 }

@@ -187,3 +187,13 @@ impl ApiDataType {
         }
     }
 }
+
+// ===== 配当統計情報用構造体 =====
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PayoutStats {
+    pub avg_trifecta: Option<f64>,
+    pub max_trifecta: Option<i32>,
+    pub avg_win: Option<f64>,
+    pub max_win: Option<i32>,
+}

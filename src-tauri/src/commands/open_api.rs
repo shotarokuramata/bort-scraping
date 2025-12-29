@@ -1,4 +1,4 @@
-use crate::models::open_api::ApiDataType;
+use crate::models::open_api::{ApiDataType, PayoutStats, RaceResult};
 use crate::services::open_api_service::OpenApiService;
 use std::sync::Arc;
 use tauri::State;
@@ -150,4 +150,48 @@ pub async fn export_open_api_to_csv(
     };
 
     service.export_to_csv(&output_path, api_data_type).await
+}
+
+// ===== 高配当検索機能 =====
+
+/// 高配当レース検索
+#[tauri::command]
+pub async fn search_high_payout_races(
+    state: State<'_, OpenApiServiceState>,
+    min_payout: i32,
+    payout_type: String,
+    limit: Option<i32>,
+) -> Result<Vec<RaceResult>, String> {
+    // payout_type バリデーション
+    if !["win", "trifecta", "exacta", "place"].contains(&payout_type.as_str()) {
+        return Err(format!(
+            "Invalid payout_type: '{}'. Expected 'win', 'trifecta', 'exacta', or 'place'",
+            payout_type
+        ));
+    }
+
+    // min_payout バリデーション
+    if min_payout < 0 {
+        return Err("min_payout must be non-negative".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.search_high_payout_races(min_payout, payout_type, limit).await
+}
+
+/// 配当統計情報取得
+#[tauri::command]
+pub async fn get_payout_statistics(
+    state: State<'_, OpenApiServiceState>,
+) -> Result<PayoutStats, String> {
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.get_payout_statistics().await
 }
