@@ -108,6 +108,8 @@ pub struct ProgramRacerInfo {
     pub racer_name: Option<String>,
     pub racer_number: Option<i32>,
     pub racer_class_number: Option<i32>,
+    pub racer_branch_number: Option<i32>,         // 支部番号（追加）
+    pub racer_birthplace_number: Option<i32>,     // 出身地番号（追加）
     pub racer_age: Option<i32>,
     pub racer_weight: Option<f64>,
     pub racer_flying_count: Option<i32>,
@@ -120,7 +122,11 @@ pub struct ProgramRacerInfo {
     pub racer_local_top_2_percent: Option<f64>,
     pub racer_local_top_3_percent: Option<f64>,
     pub racer_assigned_motor_number: Option<i32>,
+    pub racer_assigned_motor_top_2_percent: Option<f64>,  // モーター2連対率（追加）
+    pub racer_assigned_motor_top_3_percent: Option<f64>,  // モーター3連対率（追加）
     pub racer_assigned_boat_number: Option<i32>,
+    pub racer_assigned_boat_top_2_percent: Option<f64>,   // ボート2連対率（追加）
+    pub racer_assigned_boat_top_3_percent: Option<f64>,   // ボート3連対率（追加）
 }
 
 // ===== データベース保存用レコード型 =====
@@ -196,4 +202,88 @@ pub struct PayoutStats {
     pub max_trifecta: Option<i32>,
     pub avg_win: Option<f64>,
     pub max_win: Option<i32>,
+}
+
+// ===== V3マイグレーション用構造体（正規化テーブル） =====
+
+/// racesテーブルのレコード構造体
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct RaceRecord {
+    pub id: i64,
+    pub race_date: String,
+    pub venue_code: String,
+    pub race_number: i32,
+    // 気象条件
+    pub race_wind: Option<f64>,
+    pub race_wind_direction_number: Option<f64>,
+    pub race_wave: Option<f64>,
+    pub race_weather_number: Option<f64>,
+    pub race_temperature: Option<f64>,
+    pub race_water_temperature: Option<f64>,
+    pub race_technique_number: Option<f64>,
+    // 配当情報
+    pub win_payout: Option<i32>,
+    pub place_payout_max: Option<i32>,
+    pub exacta_payout: Option<i32>,
+    pub quinella_payout: Option<i32>,
+    pub trifecta_payout: Option<i32>,
+    pub trio_payout: Option<i32>,
+    // 勝者情報
+    pub winner_boat_number: Option<i32>,
+    pub winner_racer_number: Option<i32>,
+    // レース詳細（Programs APIから）
+    pub race_grade_number: Option<i32>,
+    pub race_title: Option<String>,
+    pub race_subtitle: Option<String>,
+    pub race_distance: Option<i32>,
+    // 生JSONデータ
+    pub result_data_json: Option<String>,
+    pub program_data_json: Option<String>,
+    // メタデータ
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// race_participantsテーブルのレコード構造体
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct RaceParticipantRecord {
+    pub id: i64,
+    pub race_id: i64,
+    // 艇・選手情報
+    pub boat_number: i32,
+    pub racer_number: Option<i32>,
+    pub racer_name: Option<String>,
+    // 級別・所属（Programs APIから）
+    pub racer_class_number: Option<i32>,
+    pub racer_branch_number: Option<i32>,
+    pub racer_birthplace_number: Option<i32>,
+    pub racer_age: Option<i32>,
+    pub racer_weight: Option<f64>,
+    // スタート・進入情報
+    pub course_number: Option<i32>,
+    pub start_timing: Option<f64>,
+    pub entry_number: Option<i32>,
+    // レース結果
+    pub place_number: Option<i32>,
+    pub decision_hand: Option<String>,
+    // 成績情報（Programs APIから）
+    pub flying_count: Option<i32>,
+    pub late_count: Option<i32>,
+    pub average_start_timing: Option<f64>,
+    pub national_top_1_percent: Option<f64>,
+    pub national_top_2_percent: Option<f64>,
+    pub national_top_3_percent: Option<f64>,
+    pub local_top_1_percent: Option<f64>,
+    pub local_top_2_percent: Option<f64>,
+    pub local_top_3_percent: Option<f64>,
+    // モーター・ボート情報（Programs APIから）
+    pub assigned_motor_number: Option<i32>,
+    pub assigned_motor_top_2_percent: Option<f64>,
+    pub assigned_motor_top_3_percent: Option<f64>,
+    pub assigned_boat_number: Option<i32>,
+    pub assigned_boat_top_2_percent: Option<f64>,
+    pub assigned_boat_top_3_percent: Option<f64>,
+    // メタデータ
+    pub created_at: String,
+    pub updated_at: String,
 }
