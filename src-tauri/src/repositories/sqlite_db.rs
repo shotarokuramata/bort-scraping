@@ -1,5 +1,5 @@
 use crate::models::open_api::{PreviewRecord, ProgramRecord, ResultRecord};
-use sqlx::{Row, SqlitePool};
+use sqlx::SqlitePool;
 
 pub struct SqliteRepository {
     pool: SqlitePool,
@@ -110,24 +110,6 @@ impl SqliteRepository {
         Ok(())
     }
 
-    /// 日付範囲で Previews を取得
-    pub async fn get_previews_by_date_range(
-        &self,
-        start_date: &str,
-        end_date: &str,
-    ) -> Result<Vec<PreviewRecord>, sqlx::Error> {
-        let records = sqlx::query_as::<_, PreviewRecord>(
-            "SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-             FROM previews
-             WHERE date >= ? AND date <= ?
-             ORDER BY date, venue_code, race_number",
-        )
-        .bind(start_date)
-        .bind(end_date)
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(records)
-    }
 
     /// すべての Previews を取得（CSV エクスポート用）
     pub async fn get_all_previews(&self) -> Result<Vec<PreviewRecord>, sqlx::Error> {
@@ -164,24 +146,6 @@ impl SqliteRepository {
         Ok(())
     }
 
-    /// 日付範囲で Results を取得
-    pub async fn get_results_by_date_range(
-        &self,
-        start_date: &str,
-        end_date: &str,
-    ) -> Result<Vec<ResultRecord>, sqlx::Error> {
-        let records = sqlx::query_as::<_, ResultRecord>(
-            "SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-             FROM results
-             WHERE date >= ? AND date <= ?
-             ORDER BY date, venue_code, race_number",
-        )
-        .bind(start_date)
-        .bind(end_date)
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(records)
-    }
 
     /// すべての Results を取得（CSV エクスポート用）
     pub async fn get_all_results(&self) -> Result<Vec<ResultRecord>, sqlx::Error> {
@@ -218,24 +182,6 @@ impl SqliteRepository {
         Ok(())
     }
 
-    /// 日付範囲で Programs を取得
-    pub async fn get_programs_by_date_range(
-        &self,
-        start_date: &str,
-        end_date: &str,
-    ) -> Result<Vec<ProgramRecord>, sqlx::Error> {
-        let records = sqlx::query_as::<_, ProgramRecord>(
-            "SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-             FROM programs
-             WHERE date >= ? AND date <= ?
-             ORDER BY date, venue_code, race_number",
-        )
-        .bind(start_date)
-        .bind(end_date)
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(records)
-    }
 
     /// すべての Programs を取得（CSV エクスポート用）
     pub async fn get_all_programs(&self) -> Result<Vec<ProgramRecord>, sqlx::Error> {

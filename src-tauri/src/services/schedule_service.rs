@@ -11,7 +11,7 @@ impl ScheduleService {
         let file_path = format!("bort-html/monthly_schedule_{}.html", current_month);
 
         // 1. 必要に応じてHTMLを取得
-        if !std::fs::metadata(&file_path).is_ok() {
+        if std::fs::metadata(&file_path).is_err() {
             fetcher::fetch_and_cache_monthly_schedule().await?;
         }
 

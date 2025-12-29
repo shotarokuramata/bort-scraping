@@ -12,6 +12,12 @@ pub struct PlayerBasicInfo {
     pub gender: String,
 }
 
+impl Default for PlayerBasicInfo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PlayerBasicInfo {
     pub fn new() -> Self {
         PlayerBasicInfo {
@@ -38,6 +44,12 @@ pub struct PerformanceData {
     pub sg_g1: Option<f64>,
 }
 
+impl Default for PerformanceData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PerformanceData {
     pub fn new() -> Self {
         PerformanceData {
@@ -58,6 +70,12 @@ pub struct LaneWinRateData {
     pub last_6_months: Option<f64>,
 }
 
+impl Default for LaneWinRateData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LaneWinRateData {
     pub fn new() -> Self {
         LaneWinRateData {
@@ -71,6 +89,12 @@ impl LaneWinRateData {
 pub struct DetailedPerformanceData {
     pub first_place_rate: PerformanceData,
     pub lane_win_rate: LaneWinRateData,
+}
+
+impl Default for DetailedPerformanceData {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DetailedPerformanceData {
@@ -99,6 +123,12 @@ pub struct STData {
     pub flying_history: Option<f64>,
 }
 
+impl Default for STData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl STData {
     pub fn new() -> Self {
         STData {
@@ -124,6 +154,12 @@ pub struct STAnalysisData {
     pub late_start_rate: Option<f64>,
 }
 
+impl Default for STAnalysisData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl STAnalysisData {
     pub fn new() -> Self {
         STAnalysisData {
@@ -139,6 +175,12 @@ pub struct STRelatedData {
     pub average_st: STData,
     pub st_ranking: STData,
     pub st_analysis: STAnalysisData,
+}
+
+impl Default for STRelatedData {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl STRelatedData {
@@ -160,6 +202,12 @@ pub struct WinningHandData {
     pub pierced_rate_6months: Option<f64>,
     pub pierce_rate_6months: Option<f64>,
     pub overtake_rate_6months: Option<f64>,
+}
+
+impl Default for WinningHandData {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WinningHandData {
@@ -190,6 +238,12 @@ pub struct RaceData {
     pub detailed_performance: DetailedPerformanceData,
     pub st_data: STRelatedData,
     pub winning_hand: WinningHandData,
+}
+
+impl Default for RaceData {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RaceData {

@@ -176,7 +176,7 @@ fn extract_player_basic_info(document: &Html) -> Result<PlayerBasicInfo, Box<dyn
                 if let Some(cell) = row.select(&course1_selector).next() {
                     // 性別の判定（女性選手の場合はjoshi.pngがある）
                     let has_female_image = cell.select(&Selector::parse("img").unwrap())
-                        .any(|img| img.value().attr("src").map_or(false, |src| src.contains("joshi.png")));
+                        .any(|img| img.value().attr("src").is_some_and(|src| src.contains("joshi.png")));
                     
                     player_info.gender = if has_female_image { "女性".to_string() } else { "男性".to_string() };
                     
@@ -205,7 +205,7 @@ fn extract_player_basic_info(document: &Html) -> Result<PlayerBasicInfo, Box<dyn
             let rows: Vec<_> = table.select(&row_selector).collect();
             
             // 1行目：期別と支部
-            if let Some(row) = rows.get(0) {
+            if let Some(row) = rows.first() {
                 if let Some(cell) = row.select(&course1_selector).next() {
                     // HTMLの構造: "65期<br><span>群馬</span>" または "65期<br>群馬"
                     let cell_html = cell.html();
@@ -309,7 +309,7 @@ fn extract_performance_metric_data(
         ];
 
         for (period_name, data_ref) in time_periods {
-            if let Some(value) = find_period_data_for_boat1(&rows, start_index, period_name)? {
+            if let Some(value) = find_period_data_for_boat1(rows, start_index, period_name)? {
                 *data_ref = Some(value);
             }
         }
@@ -348,7 +348,7 @@ fn extract_lane_win_rate_data(
         ];
 
         for (period_name, data_ref) in time_periods {
-            if let Some(value) = find_period_data_for_boat1(&rows, start_index, period_name)? {
+            if let Some(value) = find_period_data_for_boat1(rows, start_index, period_name)? {
                 *data_ref = Some(value);
             }
         }
@@ -370,7 +370,7 @@ fn find_period_data_for_boat1(
             let cells: Vec<_> = row.select(&cell_selector).collect();
             
             // 最初のセルが時期名かチェック
-            if let Some(first_cell) = cells.get(0) {
+            if let Some(first_cell) = cells.first() {
                 let first_cell_text = first_cell.text().collect::<String>();
                 if first_cell_text.trim() == period_name {
                     // 1号艇のデータは2番目のセル（インデックス1）
@@ -481,7 +481,7 @@ fn extract_st_metric_data(
         ];
 
         for (period_name, data_ref) in time_periods {
-            if let Some(value) = find_st_period_data_for_boat1(&rows, start_index, period_name)? {
+            if let Some(value) = find_st_period_data_for_boat1(rows, start_index, period_name)? {
                 *data_ref = Some(value);
             }
         }
@@ -521,7 +521,7 @@ fn extract_st_analysis_data(
         ];
 
         for (item_name, data_ref) in analysis_items {
-            if let Some(value) = find_st_period_data_for_boat1(&rows, start_index, item_name)? {
+            if let Some(value) = find_st_period_data_for_boat1(rows, start_index, item_name)? {
                 *data_ref = Some(value);
             }
         }
@@ -543,7 +543,7 @@ fn find_st_period_data_for_boat1(
             let cells: Vec<_> = row.select(&cell_selector).collect();
             
             // 最初のセルが時期名かチェック
-            if let Some(first_cell) = cells.get(0) {
+            if let Some(first_cell) = cells.first() {
                 let first_cell_text = first_cell.text().collect::<String>();
                 if first_cell_text.trim() == period_name {
                     // 1号艇のデータは2番目のセル（インデックス1）
@@ -632,7 +632,7 @@ fn extract_winning_hand_data(document: &Html) -> Result<WinningHandData, Box<dyn
                         let data_cells: Vec<_> = data_row.select(&cell_selector).collect();
                         if data_cells.len() >= 2 {
                             // 1つ目のセルが逃げ率、2つ目のセルが逃し率
-                            if let Some(escape_cell) = data_cells.get(0) {
+                            if let Some(escape_cell) = data_cells.first() {
                                 let escape_text = escape_cell.text().collect::<String>();
                                 if let Ok(Some(value)) = parse_winning_hand_value(&escape_text) {
                                     winning_hand.escape_rate_6months = Some(value);
@@ -661,7 +661,7 @@ fn extract_winning_hand_data(document: &Html) -> Result<WinningHandData, Box<dyn
                         let data_cells: Vec<_> = data_row.select(&cell_selector).collect();
                         if data_cells.len() >= 2 {
                             // 1つ目のセルが差され率、2つ目のセルが2号艇の差し率
-                            if let Some(pierced_cell) = data_cells.get(0) {
+                            if let Some(pierced_cell) = data_cells.first() {
                                 let pierced_text = pierced_cell.text().collect::<String>();
                                 if let Ok(Some(value)) = parse_winning_hand_value(&pierced_text) {
                                     winning_hand.pierced_rate_6months = Some(value);
@@ -690,7 +690,7 @@ fn extract_winning_hand_data(document: &Html) -> Result<WinningHandData, Box<dyn
                         let data_cells: Vec<_> = data_row.select(&cell_selector).collect();
                         if data_cells.len() >= 2 {
                             // 1つ目のセルが捲られ率、2つ目のセルが捲り率
-                            if let Some(overtaken_cell) = data_cells.get(0) {
+                            if let Some(overtaken_cell) = data_cells.first() {
                                 let overtaken_text = overtaken_cell.text().collect::<String>();
                                 if let Ok(Some(value)) = parse_winning_hand_value(&overtaken_text) {
                                     winning_hand.overtake_rate_6months = Some(value);
@@ -1072,100 +1072,6 @@ pub fn parse_win_place_odds_from_html(html_content: &str) -> Result<OddsData, Bo
     })
 }
 
-pub fn parse_odds_from_html(html_content: &str) -> Result<OddsData, Box<dyn std::error::Error>> {
-    let document = Html::parse_document(html_content);
-    let table_selector = Selector::parse("#odds table.odds_table")?;
-    let row_selector = Selector::parse("tr")?;
-    let cell_selector = Selector::parse("td")?;
-    
-    let mut combinations = Vec::new();
-    
-    // オッズテーブルを探す
-    if let Some(odds_table) = document.select(&table_selector).next() {
-        println!("オッズテーブルが見つかりました");
-        
-        // テーブルの行をすべて取得
-        let rows: Vec<_> = odds_table.select(&row_selector).collect();
-        
-        // 三連単のオッズデータを解析
-        // テーブルの構造: 1号艇から6号艇まで、各艇が1着の場合の組み合わせとオッズ
-        for (row_idx, row) in rows.iter().enumerate() {
-            let cells: Vec<_> = row.select(&cell_selector).collect();
-            
-            // オッズ値を含む行を特定（数値を含むセルがある行）
-            for (cell_idx, cell) in cells.iter().enumerate() {
-                let cell_text = cell.text().collect::<String>().trim().to_string();
-                
-                // オッズ値として有効な数値かチェック（小数点を含む数値）
-                if let Ok(odds_value) = cell_text.parse::<f64>() {
-                    if odds_value > 1.0 { // 有効なオッズ値のみ
-                        // セルの位置とクラス情報から組み合わせを推定
-                        // この部分は複雑なテーブル構造のため、位置ベースで推定
-                        if let Some(combination) = parse_combination_from_position(row_idx, cell_idx, &cells) {
-                            combinations.push(OddsCombination {
-                                first: combination.0,
-                                second: combination.1, 
-                                third: combination.2,
-                                odds: odds_value,
-                                is_combined: cell_text.contains("合成"),
-                                range_text: None, // 三連単では使用しない
-                            });
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        return Err("オッズテーブルが見つかりませんでした".into());
-    }
-    
-    println!("解析完了: {}個の組み合わせを取得", combinations.len());
-    
-    Ok(OddsData {
-        betting_type: BettingType::Trifecta, // デフォルトで三連単
-        combinations,
-    })
-}
-
-// テーブルの位置から組み合わせを推定するヘルパー関数
-fn parse_combination_from_position(
-    _row_idx: usize,
-    _cell_idx: usize,
-    cells: &[scraper::ElementRef]
-) -> Option<(u8, u8, Option<u8>)> {
-    // この実装は簡略化されています
-    // 実際のテーブル構造に基づいて詳細な解析が必要
-    
-    // ボート番号のクラス情報を取得
-    let mut boat_numbers = Vec::new();
-    
-    for cell in cells {
-        if let Some(class_attr) = cell.value().attr("class") {
-            if class_attr.contains("course1") {
-                boat_numbers.push(1);
-            } else if class_attr.contains("course2") {
-                boat_numbers.push(2);
-            } else if class_attr.contains("course3") {
-                boat_numbers.push(3);
-            } else if class_attr.contains("course4") {
-                boat_numbers.push(4);
-            } else if class_attr.contains("course5") {
-                boat_numbers.push(5);
-            } else if class_attr.contains("course6") {
-                boat_numbers.push(6);
-            }
-        }
-    }
-    
-    // 三連単の組み合わせを構築
-    if boat_numbers.len() >= 3 {
-        Some((boat_numbers[0], boat_numbers[1], Some(boat_numbers[2])))
-    } else if boat_numbers.len() >= 2 {
-        Some((boat_numbers[0], boat_numbers[1], None))
-    } else {
-        None
-    }
-}
 
 #[cfg(test)]
 mod odds_tests {

@@ -75,7 +75,7 @@ pub fn fetch_shusso_info_from_kyoteibiyori(
     fs::create_dir_all(Path::new(&file_dir))?;
     let file_path = format!("./bort-html/{}/biyori.html", today);
     let mut file = File::create(&file_path)?;
-    file.write_all(&content.as_bytes())?;
+    file.write_all(content.as_bytes())?;
 
     drop(browser);
     drop(tab);
@@ -155,7 +155,7 @@ pub fn fetch_odds_info_from_kyoteibiyori(
     fs::create_dir_all(Path::new(&file_dir))?;
     let file_path = format!("./bort-html/{}/win_place_odds.html", today);
     let mut file = File::create(&file_path)?;
-    file.write_all(&content.as_bytes())?;
+    file.write_all(content.as_bytes())?;
 
     println!("単勝・複勝オッズHTMLを保存: {}", file_path);
     println!("HTMLサイズ: {} bytes", content.len());

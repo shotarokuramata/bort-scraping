@@ -1,0 +1,11 @@
+# Cargo configuration for the workspace
+
+[alias]
+# Use clippy instead of check for better linting
+c = "clippy --all-targets"
+check-all = "clippy --all-targets"
+fix-all = "clippy --fix --allow-dirty --allow-staged"
+
+[build]
+# Show more detailed build output
+incremental = true

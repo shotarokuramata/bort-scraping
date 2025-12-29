@@ -1,5 +1,5 @@
 use norimaki_db::{FileStore, KeyValueStore, serialize_to_string, deserialize_from_string, Result};
-use crate::models::race::{RaceData, BulkRaceData, OddsData};
+use crate::models::race::{RaceData, OddsData};
 use std::sync::Mutex;
 
 static DB: Mutex<Option<FileStore>> = Mutex::new(None);
@@ -100,17 +100,6 @@ impl LocalDbRepository {
         }
     }
 
-    pub fn save_bulk_race_data(&self, bulk_data: &[BulkRaceData]) -> Result<()> {
-        for data in bulk_data {
-            if let Some(race_data) = &data.race_data {
-                self.save_race_data(&data.date, data.place_number, data.race_number, race_data)?;
-            }
-            if let Some(odds_data) = &data.win_place_odds_data {
-                self.save_odds_data(&data.date, data.place_number, data.race_number, odds_data)?;
-            }
-        }
-        Ok(())
-    }
 
     pub fn get_all_race_keys(&self) -> Result<Vec<String>> {
         let db_lock = get_db()?;

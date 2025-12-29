@@ -1,5 +1,4 @@
 /// 月間スケジュールのHTTPフェッチとファイル保存を行うモジュール
-
 /// 月間スケジュールをフェッチしてファイルに保存
 pub async fn fetch_and_cache_monthly_schedule() -> Result<(), String> {
     let url = "https://www.boatrace.jp/owpc/pc/race/monthlyschedule";
@@ -46,6 +45,7 @@ pub async fn fetch_and_cache_monthly_schedule() -> Result<(), String> {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
