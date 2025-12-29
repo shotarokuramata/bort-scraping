@@ -6,7 +6,12 @@ interface OddsDataContainerProps {
 }
 
 export function OddsDataContainer({ oddsData }: OddsDataContainerProps) {
-  if (!oddsData) return null;
+  if (!oddsData) {
+    console.log("⚠️ OddsDataContainer: データなし");
+    return null;
+  }
+
+  console.log("🎨 OddsDataContainer レンダリング開始:", oddsData);
 
   return (
     <div className="race-data">

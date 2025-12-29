@@ -14,9 +14,11 @@ export function useRaceData() {
     
     try {
       const result = await invoke<RaceData>("get_biyori_info", { date, raceNumber, placeNumber });
+      console.log("✅ レースデータ取得成功:", result);
       setRaceData(result);
     } catch (err) {
-      setError(err as string);
+      console.error("❌ レースデータ取得エラー:", err);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

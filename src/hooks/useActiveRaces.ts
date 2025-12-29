@@ -15,7 +15,7 @@ export function useActiveRaces() {
       const result = await invoke<AllVenuesResponse>("get_all_venues_with_status");
       setAllVenues(result);
     } catch (err) {
-      setError(err as string);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

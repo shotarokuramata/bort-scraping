@@ -1,11 +1,11 @@
 interface PerformanceItemProps {
   label: string;
-  value: number | undefined;
+  value: number | null | undefined;
   format?: 'percentage' | 'decimal';
 }
 
 export function PerformanceItem({ label, value, format = 'percentage' }: PerformanceItemProps) {
-  if (value === undefined) return null;
+  if (value == null) return null;
 
   const formattedValue = format === 'percentage' 
     ? `${(value * 100).toFixed(1)}%` 

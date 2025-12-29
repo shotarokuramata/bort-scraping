@@ -23,17 +23,6 @@ function Home() {
               <li>一括データ取得</li>
             </ul>
           </Link>
-
-          <Link to="/table-parser" className="menu-card">
-            <div className="card-icon">📋</div>
-            <h2>テーブルパーサー</h2>
-            <p>テーブルデータの解析・変換を行います</p>
-            <ul className="feature-list">
-              <li>データ入力・解析</li>
-              <li>形式変換</li>
-              <li>結果表示</li>
-            </ul>
-          </Link>
         </div>
       </div>
     </div>

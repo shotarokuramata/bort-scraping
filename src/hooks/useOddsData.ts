@@ -14,11 +14,11 @@ export function useOddsData() {
     
     try {
       const result = await invoke<OddsData>("get_win_place_odds_info", { date, raceNumber, placeNumber });
-      console.log("単勝・複勝オッズデータ取得成功:", result);
+      console.log("✅ 単勝・複勝オッズデータ取得成功:", result);
       setOddsData(result);
     } catch (err) {
-      console.error("単勝・複勝オッズデータ取得エラー:", err);
-      setError(err as string);
+      console.error("❌ 単勝・複勝オッズデータ取得エラー:", err);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

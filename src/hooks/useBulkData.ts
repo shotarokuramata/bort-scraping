@@ -68,7 +68,7 @@ export function useBulkData() {
       console.log(`一括取得完了: 成功${successCount}件, エラー${errorCount}件`);
     } catch (err) {
       console.error("一括取得エラー:", err);
-      setError(err as string);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }

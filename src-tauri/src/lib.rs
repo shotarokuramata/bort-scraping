@@ -9,7 +9,6 @@ mod parse {
         pub mod table_analyzer;
     }
     pub mod official;
-    pub mod table;
 }
 mod repositories;
 mod services;
@@ -26,7 +25,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Utils
             commands::greet,
-            commands::parse_table,
             // Schedule
             commands::get_active_races,
             commands::get_all_venues_with_status,

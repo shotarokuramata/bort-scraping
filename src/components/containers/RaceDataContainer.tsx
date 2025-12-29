@@ -12,7 +12,12 @@ interface RaceDataContainerProps {
 }
 
 export function RaceDataContainer({ raceData }: RaceDataContainerProps) {
-  if (!raceData) return null;
+  if (!raceData) {
+    console.log("⚠️ RaceDataContainer: データなし");
+    return null;
+  }
+
+  console.log("🎨 RaceDataContainer レンダリング開始:", raceData);
 
   return (
     <div className="race-data">
