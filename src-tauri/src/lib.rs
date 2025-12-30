@@ -53,6 +53,7 @@ pub fn run() {
             commands::save_results_to_db,
             commands::save_programs_to_db,
             commands::export_open_api_to_csv,
+            commands::export_open_api_to_csv_v3,
             // Open API - 高配当検索
             commands::search_high_payout_races,
             commands::get_payout_statistics,
@@ -122,7 +123,6 @@ mod tests {
 
         println!("✅ 日付パース検証ロジック成功");
     }
-}
 
     // ===== 高配当検索テスト =====
 
@@ -177,3 +177,72 @@ mod tests {
 
         println!("✅ Payout statistics test passed");
     }
+
+    // ===== V3 CSVエクスポートテスト =====
+
+    #[tokio::test]
+    async fn test_export_csv_v3_structure() {
+        use crate::services::open_api_service::OpenApiService;
+
+        println!("📁 Testing V3 CSV export...");
+
+        let service = OpenApiService::new(Some("data/open_api.db")).await
+            .expect("Failed to initialize service");
+
+        // 一時ディレクトリに出力
+        let temp_dir = std::env::temp_dir().join("bort_csv_export_test");
+        std::fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
+        let temp_dir_str = temp_dir.to_str().unwrap();
+
+        // CSVエクスポート実行
+        let (race_count, participant_count) = service
+            .export_to_csv_v3(temp_dir_str)
+            .await
+            .expect("Failed to export CSV");
+
+        println!("  📊 Exported {} races and {} participants", race_count, participant_count);
+
+        // ファイルの存在確認
+        let races_csv = temp_dir.join("races.csv");
+        let participants_csv = temp_dir.join("race_participants.csv");
+
+        assert!(races_csv.exists(), "races.csv should exist");
+        assert!(participants_csv.exists(), "race_participants.csv should exist");
+
+        // CSVヘッダーの検証
+        let mut races_reader = csv::Reader::from_path(&races_csv).expect("Failed to read races.csv");
+        let races_headers = races_reader.headers().expect("Failed to read headers");
+
+        // 重要なカラムが存在することを確認
+        assert!(races_headers.iter().any(|h| h == "race_date"), "Should have race_date column");
+        assert!(races_headers.iter().any(|h| h == "trifecta_payout"), "Should have trifecta_payout column");
+        assert!(races_headers.iter().any(|h| h == "race_title"), "Should have race_title column");
+
+        // JSONカラムが除外されていることを確認
+        assert!(!races_headers.iter().any(|h| h == "result_data_json"), "Should NOT have result_data_json");
+        assert!(!races_headers.iter().any(|h| h == "program_data_json"), "Should NOT have program_data_json");
+
+        println!("  ✅ races.csv has correct structure (no JSON columns)");
+
+        // race_participants.csv のヘッダー検証
+        let mut participants_reader = csv::Reader::from_path(&participants_csv).expect("Failed to read race_participants.csv");
+        let participants_headers = participants_reader.headers().expect("Failed to read headers");
+
+        assert!(participants_headers.iter().any(|h| h == "racer_name"), "Should have racer_name column");
+        assert!(participants_headers.iter().any(|h| h == "boat_number"), "Should have boat_number column");
+        assert!(participants_headers.iter().any(|h| h == "place_number"), "Should have place_number column");
+
+        println!("  ✅ race_participants.csv has correct structure");
+
+        // レコード数の検証
+        assert_eq!(race_count, 471, "Should export 471 races");
+        assert_eq!(participant_count, 2826, "Should export 2826 participants");
+
+        println!("  ✅ Correct number of records exported");
+
+        // クリーンアップ
+        std::fs::remove_dir_all(&temp_dir).expect("Failed to cleanup temp directory");
+
+        println!("✅ V3 CSV export test passed");
+    }
+}

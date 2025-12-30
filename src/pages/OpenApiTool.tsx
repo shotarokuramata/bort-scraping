@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useOpenApi } from "../hooks/useOpenApi";
 import { DataType } from "../types/OpenApiData";
 
@@ -13,8 +12,6 @@ const OpenApiTool = () => {
     fetchData,
     exportToCsv,
   } = useOpenApi();
-
-  const [selectedExportType, setSelectedExportType] = useState<DataType | "all">("all");
 
   // 日付変更ハンドラー
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,9 +39,9 @@ const OpenApiTool = () => {
     return statusText[status[type]];
   };
 
-  // エクスポートハンドラー
+  // エクスポートハンドラー（V3では常に全データをエクスポート）
   const handleExport = () => {
-    exportToCsv(selectedExportType);
+    exportToCsv("all");
   };
 
   return (
@@ -136,27 +133,18 @@ const OpenApiTool = () => {
 
       {/* CSV エクスポート */}
       <div>
-        <h2>CSV エクスポート</h2>
-        <div style={{ marginBottom: "15px" }}>
-          <label style={{ display: "block", marginBottom: "5px" }}>
-            データ種類:
-          </label>
-          <select
-            value={selectedExportType}
-            onChange={(e) => setSelectedExportType(e.target.value as DataType | "all")}
-            style={{
-              padding: "8px",
-              fontSize: "16px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-              minWidth: "200px",
-            }}
-          >
-            <option value="all">すべて</option>
-            <option value="previews">Previews のみ</option>
-            <option value="results">Results のみ</option>
-            <option value="programs">Programs のみ</option>
-          </select>
+        <h2>CSV エクスポート (V3 正規化スキーマ版)</h2>
+        <div style={{ marginBottom: "15px", padding: "10px", backgroundColor: "#f5f5f5", borderRadius: "4px" }}>
+          <p style={{ margin: "0 0 8px 0", fontSize: "14px" }}>
+            📊 <strong>エクスポート形式：</strong>
+          </p>
+          <ul style={{ margin: "0", paddingLeft: "20px", fontSize: "14px" }}>
+            <li><strong>races.csv</strong> - レース情報（配当、天候、勝者など）</li>
+            <li><strong>race_participants.csv</strong> - 参加者情報（選手、成績、モーター/ボート統計など）</li>
+          </ul>
+          <p style={{ margin: "8px 0 0 0", fontSize: "13px", color: "#666" }}>
+            ※ JSONカラムは除外され、すべてのデータが個別のカラムに展開されます
+          </p>
         </div>
 
         <button
@@ -178,8 +166,17 @@ const OpenApiTool = () => {
 
         {/* エクスポートステータス */}
         {exportStatus === "success" && (
-          <div style={{ marginTop: "10px", color: "#4CAF50" }}>
-            ✅ CSV出力が完了しました（選択した場所に保存されました）
+          <div style={{ marginTop: "10px", padding: "10px", backgroundColor: "#e8f5e9", borderRadius: "4px" }}>
+            <div style={{ color: "#4CAF50", fontWeight: "bold" }}>
+              ✅ CSV出力が完了しました
+            </div>
+            <div style={{ fontSize: "14px", marginTop: "5px", color: "#555" }}>
+              以下の2つのファイルが生成されました：
+              <ul style={{ margin: "5px 0 0 0", paddingLeft: "20px" }}>
+                <li>races.csv</li>
+                <li>race_participants.csv</li>
+              </ul>
+            </div>
           </div>
         )}
         {exportStatus === "error" && (

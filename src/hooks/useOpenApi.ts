@@ -104,8 +104,8 @@ export const useOpenApi = () => {
     }
   };
 
-  // CSV エクスポート
-  const exportToCsv = async (dataType: DataType | "all") => {
+  // CSV エクスポート (V3: 正規化スキーマ版)
+  const exportToCsv = async (_dataType: DataType | "all") => {
     setState((prev) => ({
       ...prev,
       exportStatus: "loading",
@@ -133,14 +133,23 @@ export const useOpenApi = () => {
         return;
       }
 
-      // エクスポート実行
-      const dataTypeParam = dataType === "all" ? null : dataType;
-      const count = await invoke<number>("export_open_api_to_csv", {
-        outputPath: filePath,
-        dataType: dataTypeParam,
-      });
+      // ファイルパスから出力ディレクトリを取得
+      // 例: "/path/to/export.csv" → "/path/to"
+      const outputDir = filePath.substring(0, filePath.lastIndexOf("/"));
 
-      console.log(`Exported ${count} records to CSV: ${filePath}`);
+      // V3エクスポート実行（races.csv と race_participants.csv の2ファイルを生成）
+      const [raceCount, participantCount] = await invoke<[number, number]>(
+        "export_open_api_to_csv_v3",
+        {
+          outputDir,
+        }
+      );
+
+      console.log(
+        `Exported ${raceCount} races and ${participantCount} participants to ${outputDir}/`
+      );
+      console.log(`  - ${outputDir}/races.csv`);
+      console.log(`  - ${outputDir}/race_participants.csv`);
 
       setState((prev) => ({
         ...prev,

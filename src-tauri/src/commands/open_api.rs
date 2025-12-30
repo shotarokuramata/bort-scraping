@@ -154,6 +154,39 @@ pub async fn export_open_api_to_csv(
     service.export_to_csv(&output_path, api_data_type).await
 }
 
+/// V3: CSVエクスポート（正規化スキーマ版）
+///
+/// races.csv と race_participants.csv の2ファイルを出力。
+/// JSONカラムは除外され、すべてのカラムが展開された形式でエクスポートされる。
+///
+/// # Arguments
+/// * `output_dir` - 出力先ディレクトリパス（例: "data/exports"）
+///
+/// # Returns
+/// * `Ok((race_count, participant_count))` - エクスポートされたレース数と参加者数のタプル
+#[tauri::command]
+pub async fn export_open_api_to_csv_v3(
+    state: State<'_, OpenApiServiceState>,
+    output_dir: String,
+) -> Result<(usize, usize), String> {
+    // 出力ディレクトリ検証
+    let path = std::path::Path::new(&output_dir);
+    if !path.exists() {
+        std::fs::create_dir_all(path)
+            .map_err(|e| format!("Failed to create output directory: {}", e))?;
+    }
+    if !path.is_dir() {
+        return Err(format!("Output path is not a directory: {}", output_dir));
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.export_to_csv_v3(&output_dir).await
+}
+
 // ===== 高配当検索機能 =====
 
 /// 高配当レース検索

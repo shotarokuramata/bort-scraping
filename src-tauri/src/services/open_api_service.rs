@@ -1,7 +1,7 @@
 use crate::models::open_api::{
     ApiDataType, CsvExportRow, PayoutStats, PreviewRecord, PreviewsResponse, ProgramRecord,
     ProgramsResponse, RaceResult, ResultRecord, ResultsResponse, SearchParams,
-    RaceRecord, RaceParticipantRecord,
+    RaceRecord, RaceParticipantRecord, RaceCsvRow, RaceParticipantCsvRow,
 };
 use crate::repositories::sqlite_db::SqliteRepository;
 use chrono::Utc;
@@ -306,6 +306,70 @@ impl OpenApiService {
 
         println!("✅ Exported {} rows to CSV", rows.len());
         Ok(rows.len())
+    }
+
+    /// V3: CSVエクスポート - 2ファイル方式（races.csv + race_participants.csv）
+    ///
+    /// V3正規化スキーマに基づき、JSONカラムを除外した構造化CSVを出力。
+    /// output_dirは出力ディレクトリパス。ファイル名は自動生成（races.csv, race_participants.csv）。
+    pub async fn export_to_csv_v3(
+        &self,
+        output_dir: &str,
+    ) -> Result<(usize, usize), String> {
+        println!("📊 Exporting V3 normalized data to CSV: {}", output_dir);
+
+        // 1. V3テーブルから全データ取得
+        let race_data = self.repository
+            .get_all_races_with_participants()
+            .await
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        if race_data.is_empty() {
+            return Err("No race data found in database. Run V3 migration first.".to_string());
+        }
+
+        println!("  📦 Fetched {} races from V3 tables", race_data.len());
+
+        // 2. races.csv 出力
+        let races_csv_path = format!("{}/races.csv", output_dir);
+        let mut races_writer = csv::Writer::from_path(&races_csv_path)
+            .map_err(|e| format!("Failed to create races.csv: {}", e))?;
+
+        let mut race_count = 0;
+        for (race, _) in &race_data {
+            let csv_row = RaceCsvRow::from(race);
+            races_writer.serialize(&csv_row)
+                .map_err(|e| format!("Failed to write race row: {}", e))?;
+            race_count += 1;
+        }
+
+        races_writer.flush()
+            .map_err(|e| format!("Failed to flush races CSV: {}", e))?;
+
+        println!("  ✅ Exported {} races to {}", race_count, races_csv_path);
+
+        // 3. race_participants.csv 出力
+        let participants_csv_path = format!("{}/race_participants.csv", output_dir);
+        let mut participants_writer = csv::Writer::from_path(&participants_csv_path)
+            .map_err(|e| format!("Failed to create race_participants.csv: {}", e))?;
+
+        let mut participant_count = 0;
+        for (race, participants) in &race_data {
+            for participant in participants {
+                let csv_row = RaceParticipantCsvRow::from_record(participant, race);
+                participants_writer.serialize(&csv_row)
+                    .map_err(|e| format!("Failed to write participant row: {}", e))?;
+                participant_count += 1;
+            }
+        }
+
+        participants_writer.flush()
+            .map_err(|e| format!("Failed to flush participants CSV: {}", e))?;
+
+        println!("  ✅ Exported {} participants to {}", participant_count, participants_csv_path);
+        println!("✅ CSV export completed: {} races, {} participants", race_count, participant_count);
+
+        Ok((race_count, participant_count))
     }
 
     // ===== 高配当検索機能 =====

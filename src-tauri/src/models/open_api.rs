@@ -166,6 +166,8 @@ pub struct ProgramRecord {
 
 // ===== CSV 出力用型 =====
 
+// DEPRECATED: 旧V2形式のCSVエクスポート（後方互換性のため維持）
+// 新規実装では RaceCsvRow と RaceParticipantCsvRow を使用してください
 #[derive(Debug, Clone, Serialize)]
 pub struct CsvExportRow {
     pub date: String,
@@ -173,6 +175,151 @@ pub struct CsvExportRow {
     pub race_number: i32,
     pub data_type: String,
     pub data_json: String,
+}
+
+// V3: レース情報のCSVエクスポート用構造体
+#[derive(Debug, Clone, Serialize)]
+pub struct RaceCsvRow {
+    // 基本情報
+    pub race_date: String,
+    pub venue_code: String,
+    pub race_number: i32,
+    // 気象条件
+    pub race_wind: Option<f64>,
+    pub race_wind_direction_number: Option<f64>,
+    pub race_wave: Option<f64>,
+    pub race_weather_number: Option<f64>,
+    pub race_temperature: Option<f64>,
+    pub race_water_temperature: Option<f64>,
+    pub race_technique_number: Option<f64>,
+    // 配当情報
+    pub win_payout: Option<i32>,
+    pub place_payout_max: Option<i32>,
+    pub exacta_payout: Option<i32>,
+    pub quinella_payout: Option<i32>,
+    pub trifecta_payout: Option<i32>,
+    pub trio_payout: Option<i32>,
+    // 勝者情報
+    pub winner_boat_number: Option<i32>,
+    pub winner_racer_number: Option<i32>,
+    // レース詳細
+    pub race_grade_number: Option<i32>,
+    pub race_title: Option<String>,
+    pub race_subtitle: Option<String>,
+    pub race_distance: Option<i32>,
+    // JSONカラムは除外（ユーザー要求により）
+}
+
+// V3: 参加者情報のCSVエクスポート用構造体
+#[derive(Debug, Clone, Serialize)]
+pub struct RaceParticipantCsvRow {
+    // レース識別子（結合用）
+    pub race_date: String,
+    pub venue_code: String,
+    pub race_number: i32,
+    // 艇・選手情報
+    pub boat_number: i32,
+    pub racer_number: Option<i32>,
+    pub racer_name: Option<String>,
+    // 級別・所属
+    pub racer_class_number: Option<i32>,
+    pub racer_branch_number: Option<i32>,
+    pub racer_birthplace_number: Option<i32>,
+    pub racer_age: Option<i32>,
+    pub racer_weight: Option<f64>,
+    // スタート・進入情報
+    pub course_number: Option<i32>,
+    pub start_timing: Option<f64>,
+    pub entry_number: Option<i32>,
+    // レース結果
+    pub place_number: Option<i32>,
+    pub decision_hand: Option<String>,
+    // 成績情報
+    pub flying_count: Option<i32>,
+    pub late_count: Option<i32>,
+    pub average_start_timing: Option<f64>,
+    pub national_top_1_percent: Option<f64>,
+    pub national_top_2_percent: Option<f64>,
+    pub national_top_3_percent: Option<f64>,
+    pub local_top_1_percent: Option<f64>,
+    pub local_top_2_percent: Option<f64>,
+    pub local_top_3_percent: Option<f64>,
+    // モーター・ボート情報
+    pub assigned_motor_number: Option<i32>,
+    pub assigned_motor_top_2_percent: Option<f64>,
+    pub assigned_motor_top_3_percent: Option<f64>,
+    pub assigned_boat_number: Option<i32>,
+    pub assigned_boat_top_2_percent: Option<f64>,
+    pub assigned_boat_top_3_percent: Option<f64>,
+}
+
+// RaceRecord から RaceCsvRow への変換実装
+impl From<&RaceRecord> for RaceCsvRow {
+    fn from(record: &RaceRecord) -> Self {
+        RaceCsvRow {
+            race_date: record.race_date.clone(),
+            venue_code: record.venue_code.clone(),
+            race_number: record.race_number,
+            race_wind: record.race_wind,
+            race_wind_direction_number: record.race_wind_direction_number,
+            race_wave: record.race_wave,
+            race_weather_number: record.race_weather_number,
+            race_temperature: record.race_temperature,
+            race_water_temperature: record.race_water_temperature,
+            race_technique_number: record.race_technique_number,
+            win_payout: record.win_payout,
+            place_payout_max: record.place_payout_max,
+            exacta_payout: record.exacta_payout,
+            quinella_payout: record.quinella_payout,
+            trifecta_payout: record.trifecta_payout,
+            trio_payout: record.trio_payout,
+            winner_boat_number: record.winner_boat_number,
+            winner_racer_number: record.winner_racer_number,
+            race_grade_number: record.race_grade_number,
+            race_title: record.race_title.clone(),
+            race_subtitle: record.race_subtitle.clone(),
+            race_distance: record.race_distance,
+        }
+    }
+}
+
+// RaceParticipantRecord から RaceParticipantCsvRow への変換実装
+impl RaceParticipantCsvRow {
+    pub fn from_record(participant: &RaceParticipantRecord, race: &RaceRecord) -> Self {
+        RaceParticipantCsvRow {
+            race_date: race.race_date.clone(),
+            venue_code: race.venue_code.clone(),
+            race_number: race.race_number,
+            boat_number: participant.boat_number,
+            racer_number: participant.racer_number,
+            racer_name: participant.racer_name.clone(),
+            racer_class_number: participant.racer_class_number,
+            racer_branch_number: participant.racer_branch_number,
+            racer_birthplace_number: participant.racer_birthplace_number,
+            racer_age: participant.racer_age,
+            racer_weight: participant.racer_weight,
+            course_number: participant.course_number,
+            start_timing: participant.start_timing,
+            entry_number: participant.entry_number,
+            place_number: participant.place_number,
+            decision_hand: participant.decision_hand.clone(),
+            flying_count: participant.flying_count,
+            late_count: participant.late_count,
+            average_start_timing: participant.average_start_timing,
+            national_top_1_percent: participant.national_top_1_percent,
+            national_top_2_percent: participant.national_top_2_percent,
+            national_top_3_percent: participant.national_top_3_percent,
+            local_top_1_percent: participant.local_top_1_percent,
+            local_top_2_percent: participant.local_top_2_percent,
+            local_top_3_percent: participant.local_top_3_percent,
+            assigned_motor_number: participant.assigned_motor_number,
+            assigned_motor_top_2_percent: participant.assigned_motor_top_2_percent,
+            assigned_motor_top_3_percent: participant.assigned_motor_top_3_percent,
+            assigned_boat_number: participant.assigned_boat_number,
+            assigned_boat_top_2_percent: participant.assigned_boat_top_2_percent,
+            assigned_boat_top_3_percent: participant.assigned_boat_top_3_percent,
+        }
+    }
 }
 
 // ===== Enum型 =====

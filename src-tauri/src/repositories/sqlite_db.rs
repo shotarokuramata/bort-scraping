@@ -483,6 +483,36 @@ impl SqliteRepository {
         Ok(records)
     }
 
+    /// V3: すべてのレースと選手情報を取得（CSVエクスポート用）
+    ///
+    /// 正規化されたracesとrace_participantsテーブルから全データを取得。
+    /// 検索機能と同様のパターンで、各レースに対応する選手情報をまとめて返す。
+    pub async fn get_all_races_with_participants(
+        &self,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, sqlx::Error> {
+        // 1. すべてのレースを取得（日付順）
+        let races = sqlx::query_as::<_, RaceRecord>(
+            "SELECT * FROM races ORDER BY race_date, venue_code, race_number"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        // 2. 各レースの選手情報を取得
+        let mut results = Vec::new();
+        for race in races {
+            let participants = sqlx::query_as::<_, RaceParticipantRecord>(
+                "SELECT * FROM race_participants WHERE race_id = ? ORDER BY boat_number"
+            )
+            .bind(race.id)
+            .fetch_all(&self.pool)
+            .await?;
+
+            results.push((race, participants));
+        }
+
+        Ok(results)
+    }
+
     // ===== V2マイグレーション: 高配当検索用カラム追加 =====
 
     /// V2マイグレーション: Resultsテーブルに検索用カラムを追加
