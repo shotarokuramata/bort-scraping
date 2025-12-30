@@ -1,6 +1,7 @@
 use crate::models::open_api::{
     ApiDataType, CsvExportRow, PayoutStats, PreviewRecord, PreviewsResponse, ProgramRecord,
-    ProgramsResponse, RaceResult, ResultRecord, ResultsResponse,
+    ProgramsResponse, RaceResult, ResultRecord, ResultsResponse, SearchParams,
+    RaceRecord, RaceParticipantRecord,
 };
 use crate::repositories::sqlite_db::SqliteRepository;
 use chrono::Utc;
@@ -330,6 +331,80 @@ impl OpenApiService {
     /// 配当統計情報取得
     pub async fn get_payout_statistics(&self) -> Result<PayoutStats, String> {
         self.repository.get_payout_statistics()
+            .await
+            .map_err(|e| format!("Database error: {}", e))
+    }
+
+    // ===== V3検索API: サービス層 =====
+
+    /// 複合条件検索
+    pub async fn search_races_advanced(
+        &self,
+        params: SearchParams,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+        self.repository
+            .search_races_advanced(params)
+            .await
+            .map_err(|e| format!("Database error: {}", e))
+    }
+
+    /// 選手番号での検索
+    pub async fn search_races_by_racer(
+        &self,
+        racer_number: i32,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+        self.repository
+            .search_races_by_racer(racer_number, limit)
+            .await
+            .map_err(|e| format!("Database error: {}", e))
+    }
+
+    /// 選手名での検索
+    pub async fn search_races_by_racer_name(
+        &self,
+        racer_name: String,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+        self.repository
+            .search_races_by_racer_name(racer_name, limit)
+            .await
+            .map_err(|e| format!("Database error: {}", e))
+    }
+
+    /// 級別での検索
+    pub async fn search_races_by_class(
+        &self,
+        racer_class: i32,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+        self.repository
+            .search_races_by_class(racer_class, limit)
+            .await
+            .map_err(|e| format!("Database error: {}", e))
+    }
+
+    /// 日付範囲での検索
+    pub async fn search_races_by_date_range(
+        &self,
+        date_from: String,
+        date_to: String,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+        self.repository
+            .search_races_by_date_range(date_from, date_to, limit)
+            .await
+            .map_err(|e| format!("Database error: {}", e))
+    }
+
+    /// 会場での検索
+    pub async fn search_races_by_venue(
+        &self,
+        venue_code: String,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+        self.repository
+            .search_races_by_venue(venue_code, limit)
             .await
             .map_err(|e| format!("Database error: {}", e))
     }

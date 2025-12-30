@@ -1,4 +1,6 @@
-use crate::models::open_api::{ApiDataType, PayoutStats, RaceResult};
+use crate::models::open_api::{
+    ApiDataType, PayoutStats, RaceResult, SearchParams, RaceRecord, RaceParticipantRecord,
+};
 use crate::services::open_api_service::OpenApiService;
 use std::sync::Arc;
 use tauri::State;
@@ -194,4 +196,129 @@ pub async fn get_payout_statistics(
         .ok_or("Service not initialized. Call init_open_api_service first.")?;
 
     service.get_payout_statistics().await
+}
+
+// ===== V3検索API: 複合条件検索 =====
+
+/// 複合条件検索
+#[tauri::command]
+pub async fn search_races_advanced(
+    state: State<'_, OpenApiServiceState>,
+    params: SearchParams,
+) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.search_races_advanced(params).await
+}
+
+/// 選手番号での検索
+#[tauri::command]
+pub async fn search_races_by_racer(
+    state: State<'_, OpenApiServiceState>,
+    racer_number: i32,
+    limit: Option<i32>,
+) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+    if racer_number < 0 {
+        return Err("racer_number must be non-negative".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.search_races_by_racer(racer_number, limit).await
+}
+
+/// 選手名での検索（部分一致）
+#[tauri::command]
+pub async fn search_races_by_racer_name(
+    state: State<'_, OpenApiServiceState>,
+    racer_name: String,
+    limit: Option<i32>,
+) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+    if racer_name.is_empty() {
+        return Err("racer_name cannot be empty".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.search_races_by_racer_name(racer_name, limit).await
+}
+
+/// 級別での検索
+#[tauri::command]
+pub async fn search_races_by_class(
+    state: State<'_, OpenApiServiceState>,
+    racer_class: i32,
+    limit: Option<i32>,
+) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+    // 級別バリデーション: 1=A1, 2=A2, 3=B1, 4=B2
+    if !(1..=4).contains(&racer_class) {
+        return Err("racer_class must be between 1 and 4 (1=A1, 2=A2, 3=B1, 4=B2)".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.search_races_by_class(racer_class, limit).await
+}
+
+/// 日付範囲での検索
+#[tauri::command]
+pub async fn search_races_by_date_range(
+    state: State<'_, OpenApiServiceState>,
+    date_from: String,
+    date_to: String,
+    limit: Option<i32>,
+) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+    // 日付フォーマット検証
+    if date_from.len() != 8 || !date_from.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid date_from format. Expected YYYYMMDD".to_string());
+    }
+    if date_to.len() != 8 || !date_to.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid date_to format. Expected YYYYMMDD".to_string());
+    }
+    if date_from > date_to {
+        return Err("date_from must be less than or equal to date_to".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.search_races_by_date_range(date_from, date_to, limit).await
+}
+
+/// 会場での検索
+#[tauri::command]
+pub async fn search_races_by_venue(
+    state: State<'_, OpenApiServiceState>,
+    venue_code: String,
+    limit: Option<i32>,
+) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, String> {
+    // 会場コードバリデーション（01-24の2桁形式）
+    if venue_code.len() != 2 || !venue_code.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid venue_code format. Expected 2-digit code (01-24)".to_string());
+    }
+    let venue_num: i32 = venue_code.parse().unwrap_or(0);
+    if !(1..=24).contains(&venue_num) {
+        return Err("venue_code must be between 01 and 24".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.search_races_by_venue(venue_code, limit).await
 }

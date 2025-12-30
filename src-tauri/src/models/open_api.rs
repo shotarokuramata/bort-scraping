@@ -204,6 +204,48 @@ pub struct PayoutStats {
     pub max_win: Option<i32>,
 }
 
+// ===== 検索パラメータ構造体 =====
+
+/// 複合条件検索のパラメータ
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SearchParams {
+    // 選手条件
+    pub racer_number: Option<i32>,
+    pub racer_name: Option<String>,
+    pub racer_class: Option<i32>,  // 1=A1, 2=A2, 3=B1, 4=B2
+
+    // 日付・会場条件
+    pub date_from: Option<String>,  // YYYYMMDD
+    pub date_to: Option<String>,    // YYYYMMDD
+    pub venue_code: Option<String>,
+
+    // レース条件
+    pub race_grade: Option<i32>,  // 1=SG, 2=G1, 3=G2, 4=G3, 5=一般
+    pub race_number: Option<i32>,
+
+    // 配当条件
+    pub min_trifecta_payout: Option<i32>,
+    pub max_trifecta_payout: Option<i32>,
+    pub min_win_payout: Option<i32>,
+
+    // 気象条件
+    pub min_wind: Option<f64>,
+    pub max_wind: Option<f64>,
+    pub min_wave: Option<f64>,
+    pub max_wave: Option<f64>,
+    pub min_temperature: Option<f64>,
+    pub max_temperature: Option<f64>,
+
+    // 勝者条件
+    pub winner_boat_number: Option<i32>,
+
+    // 着順条件（選手検索時）
+    pub place_number: Option<i32>,
+
+    // 結果数制限
+    pub limit: Option<i32>,
+}
+
 // ===== V3マイグレーション用構造体（正規化テーブル） =====
 
 /// racesテーブルのレコード構造体

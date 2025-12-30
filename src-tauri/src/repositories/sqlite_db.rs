@@ -1,8 +1,8 @@
 use crate::models::open_api::{
     PayoutStats, PreviewRecord, ProgramRecord, ResultRecord, RaceResult,
-    RaceRecord, RaceParticipantRecord, RaceProgram
+    RaceRecord, RaceParticipantRecord, RaceProgram, SearchParams
 };
-use sqlx::SqlitePool;
+use sqlx::{SqlitePool, QueryBuilder};
 use std::collections::HashMap;
 
 pub struct SqliteRepository {
@@ -135,24 +135,14 @@ impl SqliteRepository {
 
     // ===== Results CRUD =====
 
-    /// Result データを保存（UPSERT）
+    /// Result データを保存（V3: races + race_participants テーブルに保存）
     pub async fn save_result(&self, record: &ResultRecord) -> Result<(), sqlx::Error> {
         // JSONパースして配当データを抽出
         let data: RaceResult = serde_json::from_str(&record.data_json)
             .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
 
         // 配当情報の抽出
-        let trifecta_payout = data.payouts.trifecta
-            .as_ref()
-            .and_then(|entries| entries.first())
-            .and_then(|e| e.payout);
-
         let win_payout = data.payouts.win
-            .as_ref()
-            .and_then(|entries| entries.first())
-            .and_then(|e| e.payout);
-
-        let exacta_payout = data.payouts.exacta
             .as_ref()
             .and_then(|entries| entries.first())
             .and_then(|e| e.payout);
@@ -165,24 +155,47 @@ impl SqliteRepository {
                     .max()
             });
 
+        let exacta_payout = data.payouts.exacta
+            .as_ref()
+            .and_then(|entries| entries.first())
+            .and_then(|e| e.payout);
+
+        let quinella_payout = data.payouts.quinella
+            .as_ref()
+            .and_then(|entries| entries.first())
+            .and_then(|e| e.payout);
+
+        let trifecta_payout = data.payouts.trifecta
+            .as_ref()
+            .and_then(|entries| entries.first())
+            .and_then(|e| e.payout);
+
+        let trio_payout = data.payouts.trio
+            .as_ref()
+            .and_then(|entries| entries.first())
+            .and_then(|e| e.payout);
+
         // 1着選手の抽出
         let winner = data.boats.iter().find(|b| b.racer_place_number == Some(1));
         let winner_boat_number = winner.and_then(|w| Some(w.racer_boat_number));
         let winner_racer_number = winner.and_then(|w| w.racer_number);
 
-        sqlx::query(
+        // races テーブルにUPSERT
+        let race_id: i64 = sqlx::query_scalar(
             r#"
-            INSERT INTO results (
-                date, venue_code, race_number,
+            INSERT INTO races (
+                race_date, venue_code, race_number,
                 race_wind, race_wind_direction_number, race_wave,
                 race_weather_number, race_temperature, race_water_temperature,
                 race_technique_number,
-                win_payout, place_payout_max, exacta_payout, trifecta_payout,
+                win_payout, place_payout_max, exacta_payout, quinella_payout,
+                trifecta_payout, trio_payout,
                 winner_boat_number, winner_racer_number,
-                data_json, created_at, updated_at
+                result_data_json,
+                created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(date, venue_code, race_number)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(race_date, venue_code, race_number)
             DO UPDATE SET
                 race_wind = excluded.race_wind,
                 race_wind_direction_number = excluded.race_wind_direction_number,
@@ -194,11 +207,14 @@ impl SqliteRepository {
                 win_payout = excluded.win_payout,
                 place_payout_max = excluded.place_payout_max,
                 exacta_payout = excluded.exacta_payout,
+                quinella_payout = excluded.quinella_payout,
                 trifecta_payout = excluded.trifecta_payout,
+                trio_payout = excluded.trio_payout,
                 winner_boat_number = excluded.winner_boat_number,
                 winner_racer_number = excluded.winner_racer_number,
-                data_json = excluded.data_json,
+                result_data_json = excluded.result_data_json,
                 updated_at = excluded.updated_at
+            RETURNING id
             "#,
         )
         .bind(&record.date)
@@ -214,63 +230,256 @@ impl SqliteRepository {
         .bind(win_payout)
         .bind(place_payout_max)
         .bind(exacta_payout)
+        .bind(quinella_payout)
         .bind(trifecta_payout)
+        .bind(trio_payout)
         .bind(winner_boat_number)
         .bind(winner_racer_number)
         .bind(&record.data_json)
         .bind(&record.created_at)
         .bind(&record.updated_at)
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
+
+        // race_participants テーブルにUPSERT（6艇分）
+        for boat in &data.boats {
+            sqlx::query(
+                r#"
+                INSERT INTO race_participants (
+                    race_id, boat_number,
+                    racer_number, racer_name,
+                    course_number, start_timing,
+                    place_number,
+                    created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(race_id, boat_number)
+                DO UPDATE SET
+                    racer_number = excluded.racer_number,
+                    racer_name = excluded.racer_name,
+                    course_number = excluded.course_number,
+                    start_timing = excluded.start_timing,
+                    place_number = excluded.place_number,
+                    updated_at = excluded.updated_at
+                "#,
+            )
+            .bind(race_id)
+            .bind(boat.racer_boat_number)
+            .bind(boat.racer_number)
+            .bind(boat.racer_name.as_ref())
+            .bind(boat.racer_course_number)
+            .bind(boat.racer_start_timing)
+            .bind(boat.racer_place_number)
+            .bind(&record.created_at)
+            .bind(&record.updated_at)
+            .execute(&self.pool)
+            .await?;
+        }
+
         Ok(())
     }
 
 
-    /// すべての Results を取得（CSV エクスポート用）
+    /// すべての Results を取得（V3: races テーブルから取得）
     pub async fn get_all_results(&self) -> Result<Vec<ResultRecord>, sqlx::Error> {
-        let records = sqlx::query_as::<_, ResultRecord>(
-            "SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-             FROM results
-             ORDER BY date, venue_code, race_number",
+        #[derive(sqlx::FromRow)]
+        struct RaceRow {
+            id: i64,
+            race_date: String,
+            venue_code: String,
+            race_number: i32,
+            result_data_json: Option<String>,
+            created_at: String,
+            updated_at: String,
+        }
+
+        let rows = sqlx::query_as::<_, RaceRow>(
+            "SELECT id, race_date, venue_code, race_number, result_data_json, created_at, updated_at
+             FROM races
+             WHERE result_data_json IS NOT NULL
+             ORDER BY race_date, venue_code, race_number",
         )
         .fetch_all(&self.pool)
         .await?;
+
+        // ResultRecord形式に変換
+        let records = rows.into_iter()
+            .map(|row| ResultRecord {
+                id: row.id,
+                date: row.race_date,
+                venue_code: row.venue_code,
+                race_number: row.race_number,
+                data_json: row.result_data_json.unwrap_or_default(),
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            })
+            .collect();
+
         Ok(records)
     }
 
     // ===== Programs CRUD =====
 
-    /// Program データを保存（UPSERT）
+    /// Program データを保存（V3: races + race_participants テーブルに保存）
     pub async fn save_program(&self, record: &ProgramRecord) -> Result<(), sqlx::Error> {
-        sqlx::query(
+        use crate::models::open_api::RaceProgram;
+
+        // JSONパース
+        let data: RaceProgram = serde_json::from_str(&record.data_json)
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+
+        // races テーブルにUPSERT（program関連データのみ）
+        let race_id: i64 = sqlx::query_scalar(
             r#"
-            INSERT INTO programs (date, venue_code, race_number, data_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(date, venue_code, race_number)
-            DO UPDATE SET data_json = excluded.data_json, updated_at = excluded.updated_at
+            INSERT INTO races (
+                race_date, venue_code, race_number,
+                race_grade_number, race_title, race_subtitle, race_distance,
+                program_data_json,
+                created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(race_date, venue_code, race_number)
+            DO UPDATE SET
+                race_grade_number = excluded.race_grade_number,
+                race_title = excluded.race_title,
+                race_subtitle = excluded.race_subtitle,
+                race_distance = excluded.race_distance,
+                program_data_json = excluded.program_data_json,
+                updated_at = excluded.updated_at
+            RETURNING id
             "#,
         )
         .bind(&record.date)
         .bind(&record.venue_code)
         .bind(record.race_number)
+        .bind(data.race_grade_number)
+        .bind(data.race_title.as_ref())
+        .bind(data.race_subtitle.as_ref())
+        .bind(data.race_distance)
         .bind(&record.data_json)
         .bind(&record.created_at)
         .bind(&record.updated_at)
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
+
+        // race_participants テーブルにUPSERT（選手詳細情報）
+        for boat in &data.boats {
+            let boat_number = boat.racer_boat_number.unwrap_or(0);
+            if boat_number == 0 {
+                continue; // 艇番号が不明な場合はスキップ
+            }
+
+            sqlx::query(
+                r#"
+                INSERT INTO race_participants (
+                    race_id, boat_number,
+                    racer_number, racer_name,
+                    racer_class_number, racer_branch_number, racer_birthplace_number,
+                    racer_age, racer_weight,
+                    flying_count, late_count, average_start_timing,
+                    national_top_1_percent, national_top_2_percent, national_top_3_percent,
+                    local_top_1_percent, local_top_2_percent, local_top_3_percent,
+                    assigned_motor_number, assigned_motor_top_2_percent, assigned_motor_top_3_percent,
+                    assigned_boat_number, assigned_boat_top_2_percent, assigned_boat_top_3_percent,
+                    created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(race_id, boat_number)
+                DO UPDATE SET
+                    racer_number = excluded.racer_number,
+                    racer_name = excluded.racer_name,
+                    racer_class_number = excluded.racer_class_number,
+                    racer_branch_number = excluded.racer_branch_number,
+                    racer_birthplace_number = excluded.racer_birthplace_number,
+                    racer_age = excluded.racer_age,
+                    racer_weight = excluded.racer_weight,
+                    flying_count = excluded.flying_count,
+                    late_count = excluded.late_count,
+                    average_start_timing = excluded.average_start_timing,
+                    national_top_1_percent = excluded.national_top_1_percent,
+                    national_top_2_percent = excluded.national_top_2_percent,
+                    national_top_3_percent = excluded.national_top_3_percent,
+                    local_top_1_percent = excluded.local_top_1_percent,
+                    local_top_2_percent = excluded.local_top_2_percent,
+                    local_top_3_percent = excluded.local_top_3_percent,
+                    assigned_motor_number = excluded.assigned_motor_number,
+                    assigned_motor_top_2_percent = excluded.assigned_motor_top_2_percent,
+                    assigned_motor_top_3_percent = excluded.assigned_motor_top_3_percent,
+                    assigned_boat_number = excluded.assigned_boat_number,
+                    assigned_boat_top_2_percent = excluded.assigned_boat_top_2_percent,
+                    assigned_boat_top_3_percent = excluded.assigned_boat_top_3_percent,
+                    updated_at = excluded.updated_at
+                "#,
+            )
+            .bind(race_id)
+            .bind(boat_number)
+            .bind(boat.racer_number)
+            .bind(boat.racer_name.as_ref())
+            .bind(boat.racer_class_number)
+            .bind(boat.racer_branch_number)
+            .bind(boat.racer_birthplace_number)
+            .bind(boat.racer_age)
+            .bind(boat.racer_weight)
+            .bind(boat.racer_flying_count)
+            .bind(boat.racer_late_count)
+            .bind(boat.racer_average_start_timing)
+            .bind(boat.racer_national_top_1_percent)
+            .bind(boat.racer_national_top_2_percent)
+            .bind(boat.racer_national_top_3_percent)
+            .bind(boat.racer_local_top_1_percent)
+            .bind(boat.racer_local_top_2_percent)
+            .bind(boat.racer_local_top_3_percent)
+            .bind(boat.racer_assigned_motor_number)
+            .bind(boat.racer_assigned_motor_top_2_percent)
+            .bind(boat.racer_assigned_motor_top_3_percent)
+            .bind(boat.racer_assigned_boat_number)
+            .bind(boat.racer_assigned_boat_top_2_percent)
+            .bind(boat.racer_assigned_boat_top_3_percent)
+            .bind(&record.created_at)
+            .bind(&record.updated_at)
+            .execute(&self.pool)
+            .await?;
+        }
+
         Ok(())
     }
 
 
-    /// すべての Programs を取得（CSV エクスポート用）
+    /// すべての Programs を取得（V3: races テーブルから取得）
     pub async fn get_all_programs(&self) -> Result<Vec<ProgramRecord>, sqlx::Error> {
-        let records = sqlx::query_as::<_, ProgramRecord>(
-            "SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-             FROM programs
-             ORDER BY date, venue_code, race_number",
+        #[derive(sqlx::FromRow)]
+        struct RaceRow {
+            id: i64,
+            race_date: String,
+            venue_code: String,
+            race_number: i32,
+            program_data_json: Option<String>,
+            created_at: String,
+            updated_at: String,
+        }
+
+        let rows = sqlx::query_as::<_, RaceRow>(
+            "SELECT id, race_date, venue_code, race_number, program_data_json, created_at, updated_at
+             FROM races
+             WHERE program_data_json IS NOT NULL
+             ORDER BY race_date, venue_code, race_number",
         )
         .fetch_all(&self.pool)
         .await?;
+
+        // ProgramRecord形式に変換
+        let records = rows.into_iter()
+            .map(|row| ProgramRecord {
+                id: row.id,
+                date: row.race_date,
+                venue_code: row.venue_code,
+                race_number: row.race_number,
+                data_json: row.program_data_json.unwrap_or_default(),
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            })
+            .collect();
+
         Ok(records)
     }
 
@@ -511,53 +720,76 @@ impl SqliteRepository {
 
     // ===== 高配当検索機能 =====
 
-    /// 高配当レース検索
+    /// 高配当レース検索（V3: races テーブルから検索）
     pub async fn search_high_payout_races(
         &self,
         min_payout: i32,
         payout_type: &str,
         limit: Option<i32>,
     ) -> Result<Vec<ResultRecord>, sqlx::Error> {
-        let query = match payout_type {
-            "win" => r#"
-                SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-                FROM results
-                WHERE win_payout >= ?
-                ORDER BY win_payout DESC
-                LIMIT ?
-            "#,
-            "trifecta" => r#"
-                SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-                FROM results
-                WHERE trifecta_payout >= ?
-                ORDER BY trifecta_payout DESC
-                LIMIT ?
-            "#,
-            "exacta" => r#"
-                SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-                FROM results
-                WHERE exacta_payout >= ?
-                ORDER BY exacta_payout DESC
-                LIMIT ?
-            "#,
-            "place" => r#"
-                SELECT id, date, venue_code, race_number, data_json, created_at, updated_at
-                FROM results
-                WHERE place_payout_max >= ?
-                ORDER BY place_payout_max DESC
-                LIMIT ?
-            "#,
+        #[derive(sqlx::FromRow)]
+        struct RaceRow {
+            id: i64,
+            race_date: String,
+            venue_code: String,
+            race_number: i32,
+            result_data_json: Option<String>,
+            created_at: String,
+            updated_at: String,
+        }
+
+        let (query, order_by) = match payout_type {
+            "win" => (
+                "SELECT id, race_date, venue_code, race_number, result_data_json, created_at, updated_at
+                 FROM races
+                 WHERE win_payout >= ? AND result_data_json IS NOT NULL",
+                "ORDER BY win_payout DESC"
+            ),
+            "trifecta" => (
+                "SELECT id, race_date, venue_code, race_number, result_data_json, created_at, updated_at
+                 FROM races
+                 WHERE trifecta_payout >= ? AND result_data_json IS NOT NULL",
+                "ORDER BY trifecta_payout DESC"
+            ),
+            "exacta" => (
+                "SELECT id, race_date, venue_code, race_number, result_data_json, created_at, updated_at
+                 FROM races
+                 WHERE exacta_payout >= ? AND result_data_json IS NOT NULL",
+                "ORDER BY exacta_payout DESC"
+            ),
+            "place" => (
+                "SELECT id, race_date, venue_code, race_number, result_data_json, created_at, updated_at
+                 FROM races
+                 WHERE place_payout_max >= ? AND result_data_json IS NOT NULL",
+                "ORDER BY place_payout_max DESC"
+            ),
             _ => return Err(sqlx::Error::RowNotFound),
         };
 
-        sqlx::query_as(query)
+        let full_query = format!("{} {} LIMIT ?", query, order_by);
+        let rows = sqlx::query_as::<_, RaceRow>(&full_query)
             .bind(min_payout)
             .bind(limit.unwrap_or(100))
             .fetch_all(&self.pool)
-            .await
+            .await?;
+
+        // ResultRecord形式に変換
+        let records = rows.into_iter()
+            .map(|row| ResultRecord {
+                id: row.id,
+                date: row.race_date,
+                venue_code: row.venue_code,
+                race_number: row.race_number,
+                data_json: row.result_data_json.unwrap_or_default(),
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            })
+            .collect();
+
+        Ok(records)
     }
 
-    /// 配当統計情報取得
+    /// 配当統計情報取得（V3: races テーブルから取得）
     pub async fn get_payout_statistics(&self) -> Result<PayoutStats, sqlx::Error> {
         sqlx::query_as(
             r#"
@@ -566,7 +798,7 @@ impl SqliteRepository {
                 MAX(trifecta_payout) as max_trifecta,
                 AVG(win_payout) as avg_win,
                 MAX(win_payout) as max_win
-            FROM results
+            FROM races
             WHERE trifecta_payout IS NOT NULL
             "#
         )
@@ -989,5 +1221,230 @@ impl SqliteRepository {
         println!("    ✅ Data integrity verified: {} races, {} participants",
             new_count.0, participant_count.0);
         Ok(())
+    }
+
+    // ===== V3検索API: 正規化テーブルを使用した高度な検索 =====
+
+    /// 複合条件検索（動的クエリビルダー使用）
+    pub async fn search_races_advanced(
+        &self,
+        params: SearchParams,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, sqlx::Error> {
+        // 選手条件がある場合はJOINが必要
+        let needs_participant_join = params.racer_number.is_some()
+            || params.racer_name.is_some()
+            || params.racer_class.is_some()
+            || params.place_number.is_some();
+
+        // QueryBuilder開始
+        let mut query = QueryBuilder::new("SELECT DISTINCT r.* FROM races r");
+
+        if needs_participant_join {
+            query.push(" INNER JOIN race_participants rp ON r.id = rp.race_id");
+        }
+
+        query.push(" WHERE 1=1");
+
+        // 選手条件
+        if let Some(racer_number) = params.racer_number {
+            query.push(" AND rp.racer_number = ");
+            query.push_bind(racer_number);
+        }
+
+        if let Some(racer_name) = &params.racer_name {
+            query.push(" AND rp.racer_name LIKE ");
+            query.push_bind(format!("%{}%", racer_name));
+        }
+
+        if let Some(racer_class) = params.racer_class {
+            query.push(" AND rp.racer_class_number = ");
+            query.push_bind(racer_class);
+        }
+
+        if let Some(place) = params.place_number {
+            query.push(" AND rp.place_number = ");
+            query.push_bind(place);
+        }
+
+        // 日付・会場条件
+        if let Some(date_from) = &params.date_from {
+            query.push(" AND r.race_date >= ");
+            query.push_bind(date_from);
+        }
+
+        if let Some(date_to) = &params.date_to {
+            query.push(" AND r.race_date <= ");
+            query.push_bind(date_to);
+        }
+
+        if let Some(venue) = &params.venue_code {
+            query.push(" AND r.venue_code = ");
+            query.push_bind(venue);
+        }
+
+        // レース条件
+        if let Some(grade) = params.race_grade {
+            query.push(" AND r.race_grade_number = ");
+            query.push_bind(grade);
+        }
+
+        if let Some(race_num) = params.race_number {
+            query.push(" AND r.race_number = ");
+            query.push_bind(race_num);
+        }
+
+        // 配当条件
+        if let Some(min_payout) = params.min_trifecta_payout {
+            query.push(" AND r.trifecta_payout >= ");
+            query.push_bind(min_payout);
+        }
+
+        if let Some(max_payout) = params.max_trifecta_payout {
+            query.push(" AND r.trifecta_payout <= ");
+            query.push_bind(max_payout);
+        }
+
+        if let Some(min_win) = params.min_win_payout {
+            query.push(" AND r.win_payout >= ");
+            query.push_bind(min_win);
+        }
+
+        // 気象条件
+        if let Some(min_wind) = params.min_wind {
+            query.push(" AND r.race_wind >= ");
+            query.push_bind(min_wind);
+        }
+
+        if let Some(max_wind) = params.max_wind {
+            query.push(" AND r.race_wind <= ");
+            query.push_bind(max_wind);
+        }
+
+        if let Some(min_wave) = params.min_wave {
+            query.push(" AND r.race_wave >= ");
+            query.push_bind(min_wave);
+        }
+
+        if let Some(max_wave) = params.max_wave {
+            query.push(" AND r.race_wave <= ");
+            query.push_bind(max_wave);
+        }
+
+        if let Some(min_temp) = params.min_temperature {
+            query.push(" AND r.race_temperature >= ");
+            query.push_bind(min_temp);
+        }
+
+        if let Some(max_temp) = params.max_temperature {
+            query.push(" AND r.race_temperature <= ");
+            query.push_bind(max_temp);
+        }
+
+        // 勝者条件
+        if let Some(winner_boat) = params.winner_boat_number {
+            query.push(" AND r.winner_boat_number = ");
+            query.push_bind(winner_boat);
+        }
+
+        // ソート
+        query.push(" ORDER BY r.race_date DESC, r.venue_code, r.race_number");
+
+        // 結果数制限
+        let limit = params.limit.unwrap_or(100);
+        query.push(" LIMIT ");
+        query.push_bind(limit);
+
+        // クエリ実行
+        let races = query
+            .build_query_as::<RaceRecord>()
+            .fetch_all(&self.pool)
+            .await?;
+
+        // 各レースの選手情報を取得
+        let mut results = Vec::new();
+        for race in races {
+            let participants = sqlx::query_as::<_, RaceParticipantRecord>(
+                "SELECT * FROM race_participants WHERE race_id = ? ORDER BY boat_number"
+            )
+            .bind(race.id)
+            .fetch_all(&self.pool)
+            .await?;
+
+            results.push((race, participants));
+        }
+
+        Ok(results)
+    }
+
+    /// 選手番号での検索
+    pub async fn search_races_by_racer(
+        &self,
+        racer_number: i32,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, sqlx::Error> {
+        let params = SearchParams {
+            racer_number: Some(racer_number),
+            limit,
+            ..Default::default()
+        };
+        self.search_races_advanced(params).await
+    }
+
+    /// 選手名での検索（部分一致）
+    pub async fn search_races_by_racer_name(
+        &self,
+        racer_name: String,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, sqlx::Error> {
+        let params = SearchParams {
+            racer_name: Some(racer_name),
+            limit,
+            ..Default::default()
+        };
+        self.search_races_advanced(params).await
+    }
+
+    /// 級別での検索
+    pub async fn search_races_by_class(
+        &self,
+        racer_class: i32,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, sqlx::Error> {
+        let params = SearchParams {
+            racer_class: Some(racer_class),
+            limit,
+            ..Default::default()
+        };
+        self.search_races_advanced(params).await
+    }
+
+    /// 日付範囲での検索
+    pub async fn search_races_by_date_range(
+        &self,
+        date_from: String,
+        date_to: String,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, sqlx::Error> {
+        let params = SearchParams {
+            date_from: Some(date_from),
+            date_to: Some(date_to),
+            limit,
+            ..Default::default()
+        };
+        self.search_races_advanced(params).await
+    }
+
+    /// 会場での検索
+    pub async fn search_races_by_venue(
+        &self,
+        venue_code: String,
+        limit: Option<i32>,
+    ) -> Result<Vec<(RaceRecord, Vec<RaceParticipantRecord>)>, sqlx::Error> {
+        let params = SearchParams {
+            venue_code: Some(venue_code),
+            limit,
+            ..Default::default()
+        };
+        self.search_races_advanced(params).await
     }
 }

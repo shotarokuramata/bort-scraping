@@ -55,7 +55,14 @@ pub fn run() {
             commands::export_open_api_to_csv,
             // Open API - 高配当検索
             commands::search_high_payout_races,
-            commands::get_payout_statistics
+            commands::get_payout_statistics,
+            // Open API - V3検索（複合条件）
+            commands::search_races_advanced,
+            commands::search_races_by_racer,
+            commands::search_races_by_racer_name,
+            commands::search_races_by_class,
+            commands::search_races_by_date_range,
+            commands::search_races_by_venue
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
