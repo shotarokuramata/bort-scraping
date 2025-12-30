@@ -232,7 +232,12 @@ mod tests {
         assert!(participants_headers.iter().any(|h| h == "boat_number"), "Should have boat_number column");
         assert!(participants_headers.iter().any(|h| h == "place_number"), "Should have place_number column");
 
-        println!("  ✅ race_participants.csv has correct structure");
+        // previewsフィールドの検証
+        assert!(participants_headers.iter().any(|h| h == "racer_weight_adjustment"), "Should have racer_weight_adjustment column");
+        assert!(participants_headers.iter().any(|h| h == "racer_exhibition_time"), "Should have racer_exhibition_time column");
+        assert!(participants_headers.iter().any(|h| h == "racer_tilt_adjustment"), "Should have racer_tilt_adjustment column");
+
+        println!("  ✅ race_participants.csv has correct structure (including previews data)");
 
         // レコード数の検証
         assert_eq!(race_count, 471, "Should export 471 races");

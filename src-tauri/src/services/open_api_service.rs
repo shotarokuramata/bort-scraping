@@ -1,7 +1,7 @@
 use crate::models::open_api::{
     ApiDataType, CsvExportRow, PayoutStats, PreviewRecord, PreviewsResponse, ProgramRecord,
     ProgramsResponse, RaceResult, ResultRecord, ResultsResponse, SearchParams,
-    RaceRecord, RaceParticipantRecord, RaceCsvRow, RaceParticipantCsvRow,
+    RaceRecord, RaceParticipantRecord, RaceCsvRow, RaceParticipantCsvRow, RacePreview,
 };
 use crate::repositories::sqlite_db::SqliteRepository;
 use chrono::Utc;
@@ -336,7 +336,7 @@ impl OpenApiService {
             .map_err(|e| format!("Failed to create races.csv: {}", e))?;
 
         let mut race_count = 0;
-        for (race, _) in &race_data {
+        for (race, _, _) in &race_data {
             let csv_row = RaceCsvRow::from(race);
             races_writer.serialize(&csv_row)
                 .map_err(|e| format!("Failed to write race row: {}", e))?;
@@ -354,9 +354,35 @@ impl OpenApiService {
             .map_err(|e| format!("Failed to create race_participants.csv: {}", e))?;
 
         let mut participant_count = 0;
-        for (race, participants) in &race_data {
+        for (race, participants, preview) in &race_data {
+            // previewsデータをパース（存在する場合）
+            let preview_map = if let Some(preview_record) = preview {
+                // JSONをパースしてRacePreview構造体に変換
+                match serde_json::from_str::<RacePreview>(&preview_record.data_json) {
+                    Ok(preview_data) => Some(preview_data.boats),
+                    Err(e) => {
+                        eprintln!("⚠️  Failed to parse preview JSON: {}", e);
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+
             for participant in participants {
-                let csv_row = RaceParticipantCsvRow::from_record(participant, race);
+                // 参加者の艇番号に対応するpreviewsデータを取得
+                let preview_data = preview_map.as_ref().and_then(|boats| {
+                    let boat_key = participant.boat_number.to_string();
+                    boats.get(&boat_key).map(|boat_info| {
+                        (
+                            boat_info.racer_weight_adjustment,
+                            boat_info.racer_exhibition_time,
+                            boat_info.racer_tilt_adjustment,
+                        )
+                    })
+                });
+
+                let csv_row = RaceParticipantCsvRow::from_record(participant, race, preview_data);
                 participants_writer.serialize(&csv_row)
                     .map_err(|e| format!("Failed to write participant row: {}", e))?;
                 participant_count += 1;

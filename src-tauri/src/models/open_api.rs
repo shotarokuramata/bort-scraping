@@ -251,6 +251,10 @@ pub struct RaceParticipantCsvRow {
     pub assigned_boat_number: Option<i32>,
     pub assigned_boat_top_2_percent: Option<f64>,
     pub assigned_boat_top_3_percent: Option<f64>,
+    // プレビュー情報（previewsテーブルから）
+    pub racer_weight_adjustment: Option<f64>,
+    pub racer_exhibition_time: Option<f64>,
+    pub racer_tilt_adjustment: Option<f64>,
 }
 
 // RaceRecord から RaceCsvRow への変換実装
@@ -285,7 +289,13 @@ impl From<&RaceRecord> for RaceCsvRow {
 
 // RaceParticipantRecord から RaceParticipantCsvRow への変換実装
 impl RaceParticipantCsvRow {
-    pub fn from_record(participant: &RaceParticipantRecord, race: &RaceRecord) -> Self {
+    pub fn from_record(
+        participant: &RaceParticipantRecord,
+        race: &RaceRecord,
+        preview_data: Option<(Option<f64>, Option<f64>, Option<f64>)>, // (weight_adj, exhibition_time, tilt_adj)
+    ) -> Self {
+        let (weight_adjustment, exhibition_time, tilt_adjustment) = preview_data.unwrap_or((None, None, None));
+
         RaceParticipantCsvRow {
             race_date: race.race_date.clone(),
             venue_code: race.venue_code.clone(),
@@ -318,6 +328,9 @@ impl RaceParticipantCsvRow {
             assigned_boat_number: participant.assigned_boat_number,
             assigned_boat_top_2_percent: participant.assigned_boat_top_2_percent,
             assigned_boat_top_3_percent: participant.assigned_boat_top_3_percent,
+            racer_weight_adjustment: weight_adjustment,
+            racer_exhibition_time: exhibition_time,
+            racer_tilt_adjustment: tilt_adjustment,
         }
     }
 }
