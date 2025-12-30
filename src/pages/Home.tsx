@@ -45,6 +45,17 @@ function Home() {
               <li>レース条件と配当の分析</li>
             </ul>
           </Link>
+
+          <Link to="/manual" className="menu-card">
+            <div className="card-icon">📖</div>
+            <h2>使い方マニュアル</h2>
+            <p>各機能の使い方とTauriコマンドのリファレンス</p>
+            <ul className="feature-list">
+              <li>機能別コマンド一覧</li>
+              <li>パラメータと戻り値の詳細</li>
+              <li>使用例とサンプルコード</li>
+            </ul>
+          </Link>
         </div>
       </div>
     </div>

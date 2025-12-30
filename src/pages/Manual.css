@@ -1,0 +1,373 @@
+.manual-container {
+  min-height: 100vh;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.manual-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.manual-header {
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.manual-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.manual-header p {
+  font-size: 1.1rem;
+  opacity: 0.95;
+}
+
+/* タブナビゲーション */
+.manual-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e2e8f0;
+  background-color: #f8f9fa;
+  padding: 0 1rem;
+}
+
+.tab-button {
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  background-color: rgba(102, 126, 234, 0.05);
+  color: #396cd8;
+}
+
+.tab-button.active {
+  color: #396cd8;
+  border-bottom-color: #396cd8;
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+/* タブコンテンツ */
+.tab-content {
+  padding: 2rem;
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.tab-panel {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* コマンドカード */
+.command-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #396cd8;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.command-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateX(4px);
+}
+
+.command-header {
+  margin-bottom: 0.75rem;
+}
+
+.command-title {
+  color: #333;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.command-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.command-name-label,
+.function-name-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.command-name-label code,
+.function-name-label code {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #f1f3f5;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  color: #396cd8;
+}
+
+.meta-separator {
+  color: #ccc;
+  margin: 0 0.25rem;
+}
+
+.implementation-path {
+  margin-bottom: 1rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.command-description {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+/* パラメータセクション */
+.params-section,
+.return-type-section,
+.example-section {
+  margin-top: 1.5rem;
+}
+
+.params-section h4,
+.return-type-section h4,
+.example-section h4 {
+  font-size: 1.1rem;
+  color: #444;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+/* パラメータテーブル */
+.params-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.params-table th {
+  background-color: #f8f9fa;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+  color: #495057;
+}
+
+.params-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.params-table tr:last-child td {
+  border-bottom: none;
+}
+
+.params-table code {
+  background-color: #f1f3f5;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  color: #d63384;
+}
+
+/* 戻り値セクション */
+.return-type-section code {
+  background-color: #f1f3f5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  color: #d63384;
+  display: inline-block;
+}
+
+/* コード例 */
+.code-example {
+  background: #2d3748;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.code-example code {
+  color: inherit;
+  background: none;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .manual-container {
+    padding: 1rem;
+  }
+
+  .manual-header h1 {
+    font-size: 2rem;
+  }
+
+  .manual-tabs {
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .tab-button {
+    border-left: 3px solid transparent;
+    border-bottom: none;
+    text-align: left;
+    padding: 1rem;
+  }
+
+  .tab-button:hover,
+  .tab-button.active {
+    border-left-color: #396cd8;
+    border-bottom-color: transparent;
+  }
+
+  .command-card {
+    padding: 1.5rem;
+  }
+
+  .command-title {
+    font-size: 1.3rem;
+  }
+
+  .command-meta {
+    font-size: 0.8rem;
+  }
+
+  .params-table {
+    font-size: 0.85rem;
+  }
+
+  .params-table th,
+  .params-table td {
+    padding: 0.5rem;
+  }
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .manual-content {
+    background-color: #2d2d2d;
+  }
+
+  .tab-button {
+    color: #aaa;
+  }
+
+  .tab-button:hover {
+    background-color: rgba(36, 200, 219, 0.1);
+    color: #24c8db;
+  }
+
+  .tab-button.active {
+    color: #24c8db;
+    border-bottom-color: #24c8db;
+    background-color: rgba(36, 200, 219, 0.15);
+  }
+
+  .tab-content {
+    background-color: #1a1a1a;
+  }
+
+  .command-card {
+    background-color: #3f3f3f;
+    border-left-color: #24c8db;
+  }
+
+  .command-title {
+    color: #f0f0f0;
+  }
+
+  .command-meta {
+    color: #999;
+  }
+
+  .command-name-label code,
+  .function-name-label code {
+    background-color: #4a4a4a;
+    color: #24c8db;
+  }
+
+  .implementation-path {
+    color: #999;
+  }
+
+  .command-description {
+    color: #ddd;
+  }
+
+  .params-section h4,
+  .return-type-section h4,
+  .example-section h4 {
+    color: #f0f0f0;
+  }
+
+  .params-table th {
+    background-color: #4a4a4a;
+    color: #f6f6f6;
+    border-bottom-color: #555;
+  }
+
+  .params-table td {
+    border-bottom-color: #444;
+    color: #ddd;
+  }
+
+  .params-table code {
+    background-color: #4a4a4a;
+    color: #ff79c6;
+  }
+
+  .return-type-section code {
+    background-color: #4a4a4a;
+    color: #ff79c6;
+  }
+
+  .code-example {
+    background-color: #1a202c;
+  }
+}

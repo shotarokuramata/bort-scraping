@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import ScrapingTool from "./pages/ScrapingTool";
 import OpenApiTool from "./pages/OpenApiTool";
 import HighPayoutSearch from "./pages/HighPayoutSearch";
+import Manual from "./pages/Manual";
 import "./App.css";
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
         <Route path="/scraping" element={<ScrapingTool />} />
         <Route path="/open-api" element={<OpenApiTool />} />
         <Route path="/high-payout-search" element={<HighPayoutSearch />} />
+        <Route path="/manual" element={<Manual />} />
       </Routes>
     </Router>
   );
