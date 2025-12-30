@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DataSummaryRow } from "../../types/OpenApiData";
 
 interface DataSummaryDisplayProps {
@@ -13,6 +14,14 @@ export const DataSummaryDisplay = ({
   error,
   onRefresh,
 }: DataSummaryDisplayProps) => {
+  // 全体の展開状態を管理（デフォルトは折りたたみ）
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // 全体の展開/折りたたみをトグル
+  const toggleExpand = () => {
+    setIsExpanded((prev) => !prev);
+  };
+
   // 日付をYYYY-MM-DD形式にフォーマット
   const formatDate = (dateStr: string): string => {
     if (dateStr.length !== 8) return dateStr;
@@ -40,22 +49,40 @@ export const DataSummaryDisplay = ({
         }}
       >
         <h2>データ取得状況サマリー</h2>
-        <button
-          onClick={onRefresh}
-          disabled={isLoading}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#9C27B0",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            fontSize: "14px",
-            opacity: isLoading ? 0.6 : 1,
-          }}
-        >
-          {isLoading ? "更新中..." : "🔄 更新"}
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {data.length > 0 && (
+            <button
+              onClick={toggleExpand}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#2196F3",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              {isExpanded ? "▲ すべて折りたたむ" : "▼ すべて展開"}
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#9C27B0",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: isLoading ? "not-allowed" : "pointer",
+              fontSize: "14px",
+              opacity: isLoading ? 0.6 : 1,
+            }}
+          >
+            {isLoading ? "更新中..." : "🔄 更新"}
+          </button>
+        </div>
       </div>
 
       {/* エラー表示 */}
@@ -134,8 +161,8 @@ export const DataSummaryDisplay = ({
             </div>
           )}
 
-          {/* 日付別リスト */}
-          {data.length > 0 && (
+          {/* 日付別リスト（展開時のみ表示） */}
+          {data.length > 0 && isExpanded && (
             <div
               style={{
                 border: "1px solid #ddd",
