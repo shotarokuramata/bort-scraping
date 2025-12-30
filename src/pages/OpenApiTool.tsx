@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useOpenApi } from "../hooks/useOpenApi";
 import { DataType } from "../types/OpenApiData";
+import { DataSummaryDisplay } from "../components/parts/DataSummaryDisplay";
 
 const OpenApiTool = () => {
   const {
@@ -8,16 +10,36 @@ const OpenApiTool = () => {
     error,
     exportStatus,
     exportError,
+    summaryState,
     setDate,
     fetchData,
     exportToCsv,
+    fetchDataSummary,
   } = useOpenApi();
+
+  // コンポーネントマウント時にサマリーを取得
+  useEffect(() => {
+    fetchDataSummary().catch((err) => {
+      console.error("Failed to fetch initial summary:", err);
+    });
+  }, []);
 
   // 日付変更ハンドラー
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputDate = e.target.value; // YYYY-MM-DD
     const dateObj = new Date(inputDate);
     setDate(dateObj);
+  };
+
+  // データ取得ハンドラー（取得後にサマリーを更新）
+  const handleFetchData = async (dataType: DataType) => {
+    try {
+      await fetchData(dataType);
+      // データ取得成功後、サマリーを自動更新
+      await fetchDataSummary();
+    } catch (err) {
+      console.error(`Failed to fetch ${dataType}:`, err);
+    }
   };
 
   // 現在の日付をYYYY-MM-DD形式に変換（input[type="date"]用）
@@ -72,7 +94,7 @@ const OpenApiTool = () => {
         <h2>データ取得</h2>
         <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
           <button
-            onClick={() => fetchData("previews")}
+            onClick={() => handleFetchData("previews")}
             disabled={status.previews === "loading"}
             style={{
               padding: "10px 20px",
@@ -88,7 +110,7 @@ const OpenApiTool = () => {
             Previews 取得
           </button>
           <button
-            onClick={() => fetchData("results")}
+            onClick={() => handleFetchData("results")}
             disabled={status.results === "loading"}
             style={{
               padding: "10px 20px",
@@ -104,7 +126,7 @@ const OpenApiTool = () => {
             Results 取得
           </button>
           <button
-            onClick={() => fetchData("programs")}
+            onClick={() => handleFetchData("programs")}
             disabled={status.programs === "loading"}
             style={{
               padding: "10px 20px",
@@ -128,6 +150,16 @@ const OpenApiTool = () => {
           <div><strong>Programs:</strong> {getStatusText("programs")}</div>
         </div>
       </div>
+
+      <hr style={{ margin: "30px 0", border: "none", borderTop: "1px solid #ddd" }} />
+
+      {/* データサマリー表示 */}
+      <DataSummaryDisplay
+        data={summaryState.data}
+        isLoading={summaryState.status === "loading"}
+        error={summaryState.error}
+        onRefresh={() => fetchDataSummary()}
+      />
 
       <hr style={{ margin: "30px 0", border: "none", borderTop: "1px solid #ddd" }} />
 

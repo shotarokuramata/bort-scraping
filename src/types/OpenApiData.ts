@@ -83,3 +83,20 @@ export interface StatsState {
   stats: PayoutStats | null;
   error: string | null;
 }
+
+// データサマリー用の型定義
+
+export interface DataSummaryRow {
+  date: string; // YYYYMMDD format
+  preview_count: number;
+  result_count: number;
+  program_count: number;
+  venue_codes: string; // Comma-separated venue codes
+  total_venues: number;
+}
+
+export interface SummaryState {
+  status: "idle" | "loading" | "success" | "error";
+  data: DataSummaryRow[];
+  error: string | null;
+}

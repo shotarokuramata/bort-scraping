@@ -164,6 +164,25 @@ pub struct ProgramRecord {
     pub updated_at: String,
 }
 
+// ===== データサマリー用型 =====
+
+/// 日付ごとのデータ取得状況サマリー
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DataSummaryRow {
+    /// 日付（YYYYMMDD形式）
+    pub date: String,
+    /// Previewsデータの件数
+    pub preview_count: i32,
+    /// Resultsデータの件数
+    pub result_count: i32,
+    /// Programsデータの件数
+    pub program_count: i32,
+    /// 対象競艇場コード（カンマ区切り）
+    pub venue_codes: String,
+    /// 対象競艇場数
+    pub total_venues: i32,
+}
+
 // ===== CSV 出力用型 =====
 
 // DEPRECATED: 旧V2形式のCSVエクスポート（後方互換性のため維持）

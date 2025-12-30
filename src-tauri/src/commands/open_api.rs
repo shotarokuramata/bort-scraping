@@ -1,5 +1,5 @@
 use crate::models::open_api::{
-    ApiDataType, PayoutStats, RaceResult, SearchParams, RaceRecord, RaceParticipantRecord,
+    ApiDataType, PayoutStats, RaceResult, SearchParams, RaceRecord, RaceParticipantRecord, DataSummaryRow,
 };
 use crate::services::open_api_service::OpenApiService;
 use std::sync::Arc;
@@ -354,4 +354,17 @@ pub async fn search_races_by_venue(
         .ok_or("Service not initialized. Call init_open_api_service first.")?;
 
     service.search_races_by_venue(venue_code, limit).await
+}
+
+/// 日付ごとのデータ取得状況サマリーを取得
+#[tauri::command]
+pub async fn get_open_api_data_summary(
+    state: State<'_, OpenApiServiceState>,
+) -> Result<Vec<DataSummaryRow>, String> {
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service.get_data_summary().await
 }

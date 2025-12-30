@@ -1,6 +1,6 @@
 use crate::models::open_api::{
     PayoutStats, PreviewRecord, ProgramRecord, ResultRecord, RaceResult,
-    RaceRecord, RaceParticipantRecord, RaceProgram, SearchParams
+    RaceRecord, RaceParticipantRecord, RaceProgram, SearchParams, DataSummaryRow
 };
 use sqlx::{SqlitePool, QueryBuilder};
 use std::collections::HashMap;
@@ -1487,5 +1487,65 @@ impl SqliteRepository {
             ..Default::default()
         };
         self.search_races_advanced(params).await
+    }
+
+    /// 日付ごとのデータ取得状況サマリーを取得
+    pub async fn get_data_summary_by_date(&self) -> Result<Vec<DataSummaryRow>, sqlx::Error> {
+        let query = r#"
+            WITH all_dates AS (
+                SELECT DISTINCT date FROM previews
+                UNION
+                SELECT DISTINCT race_date as date FROM races
+            ),
+            preview_counts AS (
+                SELECT date, COUNT(*) as cnt
+                FROM previews
+                GROUP BY date
+            ),
+            result_counts AS (
+                SELECT race_date as date, COUNT(*) as cnt
+                FROM races
+                WHERE result_data_json IS NOT NULL AND result_data_json != ''
+                GROUP BY race_date
+            ),
+            program_counts AS (
+                SELECT race_date as date, COUNT(*) as cnt
+                FROM races
+                WHERE program_data_json IS NOT NULL AND program_data_json != ''
+                GROUP BY race_date
+            ),
+            venue_info AS (
+                SELECT
+                    date,
+                    GROUP_CONCAT(DISTINCT venue_code ORDER BY venue_code) as venues,
+                    COUNT(DISTINCT venue_code) as venue_count
+                FROM (
+                    SELECT date, venue_code FROM previews
+                    UNION ALL
+                    SELECT race_date as date, venue_code FROM races
+                )
+                GROUP BY date
+            )
+            SELECT
+                ad.date,
+                COALESCE(p.cnt, 0) as preview_count,
+                COALESCE(r.cnt, 0) as result_count,
+                COALESCE(pg.cnt, 0) as program_count,
+                COALESCE(v.venues, '') as venue_codes,
+                COALESCE(v.venue_count, 0) as total_venues
+            FROM all_dates ad
+            LEFT JOIN preview_counts p ON ad.date = p.date
+            LEFT JOIN result_counts r ON ad.date = r.date
+            LEFT JOIN program_counts pg ON ad.date = pg.date
+            LEFT JOIN venue_info v ON ad.date = v.date
+            ORDER BY ad.date DESC
+            LIMIT 100
+        "#;
+
+        let rows = sqlx::query_as::<_, DataSummaryRow>(query)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows)
     }
 }

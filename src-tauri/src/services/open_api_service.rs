@@ -1,7 +1,7 @@
 use crate::models::open_api::{
     ApiDataType, CsvExportRow, PayoutStats, PreviewRecord, PreviewsResponse, ProgramRecord,
     ProgramsResponse, RaceResult, ResultRecord, ResultsResponse, SearchParams,
-    RaceRecord, RaceParticipantRecord, RaceCsvRow, RaceParticipantCsvRow, RacePreview,
+    RaceRecord, RaceParticipantRecord, RaceCsvRow, RaceParticipantCsvRow, RacePreview, DataSummaryRow,
 };
 use crate::repositories::sqlite_db::SqliteRepository;
 use chrono::Utc;
@@ -497,5 +497,13 @@ impl OpenApiService {
             .search_races_by_venue(venue_code, limit)
             .await
             .map_err(|e| format!("Database error: {}", e))
+    }
+
+    /// 日付ごとのデータ取得状況サマリーを取得
+    pub async fn get_data_summary(&self) -> Result<Vec<DataSummaryRow>, String> {
+        self.repository
+            .get_data_summary_by_date()
+            .await
+            .map_err(|e| format!("Failed to get data summary: {}", e))
     }
 }

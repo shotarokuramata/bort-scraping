@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { DataType, OpenApiState, PayoutType, RaceResult, PayoutStats, SearchState, StatsState } from "../types/OpenApiData";
+import { DataType, OpenApiState, PayoutType, RaceResult, PayoutStats, SearchState, StatsState, SummaryState, DataSummaryRow } from "../types/OpenApiData";
 import { SearchParams, AdvancedSearchResult, AdvancedSearchState } from "../types/AdvancedSearch";
 
 export const useOpenApi = () => {
@@ -39,6 +39,13 @@ export const useOpenApi = () => {
   const [advancedSearchState, setAdvancedSearchState] = useState<AdvancedSearchState>({
     status: "idle",
     results: [],
+    error: null,
+  });
+
+  // データサマリー用のstate
+  const [summaryState, setSummaryState] = useState<SummaryState>({
+    status: "idle",
+    data: [],
     error: null,
   });
 
@@ -280,6 +287,38 @@ export const useOpenApi = () => {
     }
   };
 
+  // データサマリーを取得
+  const fetchDataSummary = async () => {
+    setSummaryState({
+      status: "loading",
+      data: [],
+      error: null,
+    });
+
+    try {
+      const summary = await invoke<DataSummaryRow[]>("get_open_api_data_summary");
+
+      setSummaryState({
+        status: "success",
+        data: summary,
+        error: null,
+      });
+
+      return summary;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Failed to fetch data summary:", errorMessage);
+
+      setSummaryState({
+        status: "error",
+        data: [],
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  };
+
   return {
     date: state.date,
     status: state.status,
@@ -289,11 +328,13 @@ export const useOpenApi = () => {
     searchState,
     statsState,
     advancedSearchState,
+    summaryState,
     setDate,
     fetchData,
     exportToCsv,
     searchHighPayoutRaces,
     getPayoutStatistics,
     searchAdvanced,
+    fetchDataSummary,
   };
 };
