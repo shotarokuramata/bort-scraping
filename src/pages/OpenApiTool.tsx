@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useOpenApi } from "../hooks/useOpenApi";
 import { DataType } from "../types/OpenApiData";
 import { DataSummaryDisplay } from "../components/parts/DataSummaryDisplay";
@@ -11,11 +11,18 @@ const OpenApiTool = () => {
     exportStatus,
     exportError,
     summaryState,
+    bulkFetchState,
     setDate,
     fetchData,
     exportToCsv,
     fetchDataSummary,
+    fetchDataBulk,
   } = useOpenApi();
+
+  // Bulk Fetch用のstate
+  const [bulkStartDate, setBulkStartDate] = useState("");
+  const [bulkEndDate, setBulkEndDate] = useState("");
+  const [bulkDataType, setBulkDataType] = useState<DataType>("previews");
 
   // コンポーネントマウント時にサマリーを取得
   useEffect(() => {
@@ -64,6 +71,22 @@ const OpenApiTool = () => {
   // エクスポートハンドラー（V3では常に全データをエクスポート）
   const handleExport = () => {
     exportToCsv("all");
+  };
+
+  // Bulk Fetch ハンドラー
+  const handleBulkFetch = async () => {
+    try {
+      const summary = await fetchDataBulk(
+        bulkDataType,
+        bulkStartDate.replace(/-/g, ""),  // YYYY-MM-DD → YYYYMMDD
+        bulkEndDate.replace(/-/g, "")
+      );
+      console.log("Bulk fetch completed:", summary);
+      // 取得後にサマリーを更新
+      await fetchDataSummary();
+    } catch (err) {
+      console.error("Bulk fetch failed:", err);
+    }
   };
 
   return (
@@ -149,6 +172,118 @@ const OpenApiTool = () => {
           <div><strong>Results:</strong> {getStatusText("results")}</div>
           <div><strong>Programs:</strong> {getStatusText("programs")}</div>
         </div>
+      </div>
+
+      <hr style={{ margin: "30px 0", border: "none", borderTop: "1px solid #ddd" }} />
+
+      {/* 期間一括取得 */}
+      <div style={{ marginBottom: "30px" }}>
+        <h2>期間一括取得</h2>
+        <p style={{ color: "#666", fontSize: "14px", marginBottom: "15px" }}>
+          指定した期間のデータを自動的に取得します。既にデータベースに存在する日付はスキップされます。
+        </p>
+
+        <div style={{ display: "flex", gap: "15px", marginBottom: "15px", alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div>
+            <label style={{ display: "block", marginBottom: "5px", fontSize: "14px" }}>データ種別:</label>
+            <select
+              value={bulkDataType}
+              onChange={(e) => setBulkDataType(e.target.value as DataType)}
+              style={{ padding: "8px", fontSize: "16px", borderRadius: "4px", border: "1px solid #ccc" }}
+            >
+              <option value="previews">Previews</option>
+              <option value="results">Results</option>
+              <option value="programs">Programs</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: "block", marginBottom: "5px", fontSize: "14px" }}>開始日:</label>
+            <input
+              type="date"
+              value={bulkStartDate}
+              onChange={(e) => setBulkStartDate(e.target.value)}
+              style={{ padding: "8px", fontSize: "16px", borderRadius: "4px", border: "1px solid #ccc" }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", marginBottom: "5px", fontSize: "14px" }}>終了日:</label>
+            <input
+              type="date"
+              value={bulkEndDate}
+              onChange={(e) => setBulkEndDate(e.target.value)}
+              style={{ padding: "8px", fontSize: "16px", borderRadius: "4px", border: "1px solid #ccc" }}
+            />
+          </div>
+
+          <button
+            onClick={handleBulkFetch}
+            disabled={bulkFetchState.status === "loading" || !bulkStartDate || !bulkEndDate}
+            style={{
+              padding: "10px 20px",
+              fontSize: "16px",
+              backgroundColor: "#9C27B0",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: (bulkFetchState.status === "loading" || !bulkStartDate || !bulkEndDate) ? "not-allowed" : "pointer",
+              opacity: (bulkFetchState.status === "loading" || !bulkStartDate || !bulkEndDate) ? 0.6 : 1,
+            }}
+          >
+            {bulkFetchState.status === "loading" ? "取得中..." : "一括取得開始"}
+          </button>
+        </div>
+
+        {/* プログレス表示 */}
+        {bulkFetchState.progress && (
+          <div style={{ marginTop: "15px", padding: "15px", backgroundColor: "#f5f5f5", borderRadius: "4px" }}>
+            <div style={{ marginBottom: "10px", fontSize: "14px" }}>{bulkFetchState.progress.message}</div>
+            <div style={{ marginBottom: "5px", fontSize: "14px" }}>
+              進捗: {bulkFetchState.progress.current} / {bulkFetchState.progress.total} 日
+            </div>
+            <progress
+              value={bulkFetchState.progress.current}
+              max={bulkFetchState.progress.total}
+              style={{ width: "100%", height: "20px" }}
+            />
+          </div>
+        )}
+
+        {/* サマリー表示 */}
+        {bulkFetchState.summary && (
+          <div style={{ marginTop: "15px", padding: "15px", backgroundColor: "#e8f5e9", borderRadius: "4px" }}>
+            <h3 style={{ marginTop: 0 }}>取得完了サマリー</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "14px" }}>
+              <div>対象日数: {bulkFetchState.summary.total_days} 日</div>
+              <div>成功: {bulkFetchState.summary.success_count} 日</div>
+              <div>スキップ: {bulkFetchState.summary.skipped_count} 日 (既存)</div>
+              <div>エラー: {bulkFetchState.summary.error_count} 日</div>
+            </div>
+
+            {bulkFetchState.summary.errors.length > 0 && (
+              <details style={{ marginTop: "10px" }}>
+                <summary style={{ cursor: "pointer", fontWeight: "bold", fontSize: "14px" }}>
+                  エラー詳細 ({bulkFetchState.summary.errors.length}件)
+                </summary>
+                <ul style={{ marginTop: "10px", paddingLeft: "20px", fontSize: "13px" }}>
+                  {bulkFetchState.summary.errors.map((err, i) => (
+                    <li key={i} style={{ marginBottom: "5px" }}>
+                      <strong>{err.date}</strong>: {err.error_message}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
+
+        {/* エラー表示 */}
+        {bulkFetchState.error && (
+          <div style={{ marginTop: "15px", padding: "15px", backgroundColor: "#ffebee", borderRadius: "4px", color: "#c62828", fontSize: "14px" }}>
+            ❌ エラー: {bulkFetchState.error}
+          </div>
+        )}
       </div>
 
       <hr style={{ margin: "30px 0", border: "none", borderTop: "1px solid #ddd" }} />

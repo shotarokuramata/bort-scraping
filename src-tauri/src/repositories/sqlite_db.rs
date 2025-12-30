@@ -1548,4 +1548,39 @@ impl SqliteRepository {
 
         Ok(rows)
     }
+
+    // ===== Bulk Fetch用ヘルパー関数 =====
+
+    /// 指定日付のPreviewsレコード数をカウント（キャッシュチェック用）
+    pub async fn count_previews_by_date(&self, date: &str) -> Result<i64, sqlx::Error> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM previews WHERE date = ?"
+        )
+        .bind(date)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count.0)
+    }
+
+    /// 指定日付のResultsレコード数をカウント
+    pub async fn count_results_by_date(&self, date: &str) -> Result<i64, sqlx::Error> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM results WHERE date = ?"
+        )
+        .bind(date)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count.0)
+    }
+
+    /// 指定日付のProgramsレコード数をカウント
+    pub async fn count_programs_by_date(&self, date: &str) -> Result<i64, sqlx::Error> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM programs WHERE date = ?"
+        )
+        .bind(date)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count.0)
+    }
 }

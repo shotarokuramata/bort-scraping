@@ -508,3 +508,33 @@ pub struct RaceParticipantRecord {
     pub created_at: String,
     pub updated_at: String,
 }
+
+// ===== Bulk Fetch用構造体 =====
+
+/// 一括取得のサマリー
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BulkFetchSummary {
+    pub total_days: usize,
+    pub success_count: usize,
+    pub error_count: usize,
+    pub skipped_count: usize,
+    pub errors: Vec<BulkFetchError>,
+}
+
+/// 個別日付のエラー
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BulkFetchError {
+    pub date: String,
+    pub error_message: String,
+}
+
+/// 進捗通知ペイロード
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenApiBulkProgressPayload {
+    pub message: String,
+    pub current: usize,
+    pub total: usize,
+    pub date: String,
+    pub data_type: String,  // "previews" | "results" | "programs"
+    pub status: String,     // "fetching" | "cached" | "saved" | "error" | "completed"
+}

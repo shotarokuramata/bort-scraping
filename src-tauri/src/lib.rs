@@ -65,7 +65,11 @@ pub fn run() {
             commands::search_races_by_date_range,
             commands::search_races_by_venue,
             // Open API - データサマリー
-            commands::get_open_api_data_summary
+            commands::get_open_api_data_summary,
+            // Open API - Bulk Fetch
+            commands::fetch_previews_data_bulk,
+            commands::fetch_results_data_bulk,
+            commands::fetch_programs_data_bulk
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

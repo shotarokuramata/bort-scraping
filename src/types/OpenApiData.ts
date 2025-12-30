@@ -100,3 +100,34 @@ export interface SummaryState {
   data: DataSummaryRow[];
   error: string | null;
 }
+
+// Bulk Fetch用の型定義
+
+export interface BulkFetchSummary {
+  total_days: number;
+  success_count: number;
+  error_count: number;
+  skipped_count: number;
+  errors: BulkFetchError[];
+}
+
+export interface BulkFetchError {
+  date: string;
+  error_message: string;
+}
+
+export interface OpenApiBulkProgressPayload {
+  message: string;
+  current: number;
+  total: number;
+  date: string;
+  data_type: "previews" | "results" | "programs";
+  status: "fetching" | "cached" | "saved" | "error" | "completed";
+}
+
+export interface BulkFetchState {
+  status: "idle" | "loading" | "success" | "error";
+  summary: BulkFetchSummary | null;
+  progress: OpenApiBulkProgressPayload | null;
+  error: string | null;
+}

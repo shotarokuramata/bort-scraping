@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { DataType, OpenApiState, PayoutType, RaceResult, PayoutStats, SearchState, StatsState, SummaryState, DataSummaryRow } from "../types/OpenApiData";
+import { DataType, OpenApiState, PayoutType, RaceResult, PayoutStats, SearchState, StatsState, SummaryState, DataSummaryRow, BulkFetchState, BulkFetchSummary, OpenApiBulkProgressPayload } from "../types/OpenApiData";
 import { SearchParams, AdvancedSearchResult, AdvancedSearchState } from "../types/AdvancedSearch";
 
 export const useOpenApi = () => {
@@ -48,6 +48,40 @@ export const useOpenApi = () => {
     data: [],
     error: null,
   });
+
+  // Bulk Fetch用のstate
+  const [bulkFetchState, setBulkFetchState] = useState<BulkFetchState>({
+    status: "idle",
+    summary: null,
+    progress: null,
+    error: null,
+  });
+
+  // Bulk Fetch の進捗イベントをリッスン
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    const setupListener = async () => {
+      const { listen } = await import("@tauri-apps/api/event");
+      unlisten = await listen<OpenApiBulkProgressPayload>(
+        "open-api-bulk-progress",
+        (event) => {
+          setBulkFetchState((prev) => ({
+            ...prev,
+            progress: event.payload,
+          }));
+        }
+      );
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
 
   // 日付をYYYYMMDD形式に変換
   function formatDate(date: Date): string {
@@ -319,6 +353,57 @@ export const useOpenApi = () => {
     }
   };
 
+  // 期間一括取得
+  const fetchDataBulk = async (
+    dataType: DataType,
+    startDate: string,  // YYYYMMDD形式
+    endDate: string     // YYYYMMDD形式
+  ) => {
+    setBulkFetchState({
+      status: "loading",
+      summary: null,
+      progress: null,
+      error: null,
+    });
+
+    try {
+      let command = "";
+      if (dataType === "previews") command = "fetch_previews_data_bulk";
+      else if (dataType === "results") command = "fetch_results_data_bulk";
+      else if (dataType === "programs") command = "fetch_programs_data_bulk";
+
+      const summary = await invoke<BulkFetchSummary>(command, {
+        startDate,
+        endDate,
+      });
+
+      console.log(
+        `Bulk fetch completed: ${summary.success_count} success, ${summary.skipped_count} skipped, ${summary.error_count} errors`
+      );
+
+      setBulkFetchState({
+        status: "success",
+        summary,
+        progress: null,
+        error: null,
+      });
+
+      return summary;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Bulk fetch failed:", errorMessage);
+
+      setBulkFetchState({
+        status: "error",
+        summary: null,
+        progress: null,
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  };
+
   return {
     date: state.date,
     status: state.status,
@@ -329,6 +414,7 @@ export const useOpenApi = () => {
     statsState,
     advancedSearchState,
     summaryState,
+    bulkFetchState,
     setDate,
     fetchData,
     exportToCsv,
@@ -336,5 +422,6 @@ export const useOpenApi = () => {
     getPayoutStatistics,
     searchAdvanced,
     fetchDataSummary,
+    fetchDataBulk,
   };
 };

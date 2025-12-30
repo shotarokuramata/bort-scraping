@@ -1,5 +1,6 @@
 use crate::models::open_api::{
     ApiDataType, PayoutStats, RaceResult, SearchParams, RaceRecord, RaceParticipantRecord, DataSummaryRow,
+    BulkFetchSummary,
 };
 use crate::services::open_api_service::OpenApiService;
 use std::sync::Arc;
@@ -367,4 +368,108 @@ pub async fn get_open_api_data_summary(
         .ok_or("Service not initialized. Call init_open_api_service first.")?;
 
     service.get_data_summary().await
+}
+
+// ===== Bulk Fetch Commands =====
+
+/// Previews データの期間一括取得
+#[tauri::command]
+pub async fn fetch_previews_data_bulk(
+    window: tauri::Window,
+    state: State<'_, OpenApiServiceState>,
+    start_date: String,  // YYYYMMDD形式
+    end_date: String,    // YYYYMMDD形式
+) -> Result<BulkFetchSummary, String> {
+    // パラメータ検証
+    if start_date.len() != 8 || !start_date.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid start_date format. Expected YYYYMMDD".to_string());
+    }
+    if end_date.len() != 8 || !end_date.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid end_date format. Expected YYYYMMDD".to_string());
+    }
+    if start_date > end_date {
+        return Err("start_date must be less than or equal to end_date".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service
+        .fetch_data_bulk(
+            Some(window),
+            ApiDataType::Previews,
+            &start_date,
+            &end_date,
+        )
+        .await
+}
+
+/// Results データの期間一括取得
+#[tauri::command]
+pub async fn fetch_results_data_bulk(
+    window: tauri::Window,
+    state: State<'_, OpenApiServiceState>,
+    start_date: String,  // YYYYMMDD形式
+    end_date: String,    // YYYYMMDD形式
+) -> Result<BulkFetchSummary, String> {
+    // パラメータ検証
+    if start_date.len() != 8 || !start_date.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid start_date format. Expected YYYYMMDD".to_string());
+    }
+    if end_date.len() != 8 || !end_date.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid end_date format. Expected YYYYMMDD".to_string());
+    }
+    if start_date > end_date {
+        return Err("start_date must be less than or equal to end_date".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service
+        .fetch_data_bulk(
+            Some(window),
+            ApiDataType::Results,
+            &start_date,
+            &end_date,
+        )
+        .await
+}
+
+/// Programs データの期間一括取得
+#[tauri::command]
+pub async fn fetch_programs_data_bulk(
+    window: tauri::Window,
+    state: State<'_, OpenApiServiceState>,
+    start_date: String,  // YYYYMMDD形式
+    end_date: String,    // YYYYMMDD形式
+) -> Result<BulkFetchSummary, String> {
+    // パラメータ検証
+    if start_date.len() != 8 || !start_date.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid start_date format. Expected YYYYMMDD".to_string());
+    }
+    if end_date.len() != 8 || !end_date.chars().all(|c| c.is_numeric()) {
+        return Err("Invalid end_date format. Expected YYYYMMDD".to_string());
+    }
+    if start_date > end_date {
+        return Err("start_date must be less than or equal to end_date".to_string());
+    }
+
+    let service_state = state.lock().await;
+    let service = service_state
+        .as_ref()
+        .ok_or("Service not initialized. Call init_open_api_service first.")?;
+
+    service
+        .fetch_data_bulk(
+            Some(window),
+            ApiDataType::Programs,
+            &start_date,
+            &end_date,
+        )
+        .await
 }

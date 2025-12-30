@@ -2,11 +2,13 @@ use crate::models::open_api::{
     ApiDataType, CsvExportRow, PayoutStats, PreviewRecord, PreviewsResponse, ProgramRecord,
     ProgramsResponse, RaceResult, ResultRecord, ResultsResponse, SearchParams,
     RaceRecord, RaceParticipantRecord, RaceCsvRow, RaceParticipantCsvRow, RacePreview, DataSummaryRow,
+    BulkFetchSummary, BulkFetchError, OpenApiBulkProgressPayload,
 };
 use crate::repositories::sqlite_db::SqliteRepository;
 use chrono::Utc;
 use std::env;
 use std::path::PathBuf;
+use tauri::Emitter;
 
 const BASE_URL: &str = "https://boatraceopenapi.github.io";
 const DEFAULT_DB_PATH: &str = "data/open_api.db";
@@ -505,5 +507,221 @@ impl OpenApiService {
             .get_data_summary_by_date()
             .await
             .map_err(|e| format!("Failed to get data summary: {}", e))
+    }
+
+    /// 期間を指定してデータを一括取得（Bulk Fetch）
+    pub async fn fetch_data_bulk(
+        &self,
+        window: Option<tauri::Window>,
+        data_type: ApiDataType,
+        start_date: &str,  // YYYYMMDD形式
+        end_date: &str,    // YYYYMMDD形式
+    ) -> Result<BulkFetchSummary, String> {
+        use chrono::{Duration, NaiveDate};
+        use tokio::time::{sleep, Duration as TokioDuration};
+
+        // 日付範囲のパース
+        let start = NaiveDate::parse_from_str(start_date, "%Y%m%d")
+            .map_err(|e| format!("Invalid start date: {}", e))?;
+        let end = NaiveDate::parse_from_str(end_date, "%Y%m%d")
+            .map_err(|e| format!("Invalid end date: {}", e))?;
+
+        let total_days = (end - start).num_days() + 1;
+        let mut current_date = start;
+        let mut current_day = 0;
+
+        let mut success_count = 0;
+        let mut error_count = 0;
+        let mut skipped_count = 0;
+        let mut errors = Vec::new();
+
+        println!(
+            "🔄 Starting bulk fetch: {} from {} to {} ({} days)",
+            data_type.as_str(),
+            start_date,
+            end_date,
+            total_days
+        );
+
+        // 各日付を順次処理
+        while current_date <= end {
+            current_day += 1;
+            let date_str = current_date.format("%Y%m%d").to_string();
+
+            // STEP 1: データが既に存在するかチェック（キャッシュ優先戦略）
+            let existing_count = match data_type {
+                ApiDataType::Previews => self
+                    .repository
+                    .count_previews_by_date(&date_str)
+                    .await
+                    .unwrap_or(0),
+                ApiDataType::Results => self
+                    .repository
+                    .count_results_by_date(&date_str)
+                    .await
+                    .unwrap_or(0),
+                ApiDataType::Programs => self
+                    .repository
+                    .count_programs_by_date(&date_str)
+                    .await
+                    .unwrap_or(0),
+            };
+
+            if existing_count > 0 {
+                // スキップ - 既にDBに存在
+                let message = format!("📦 Skipping {} (already in DB)", date_str);
+                println!("{}", message);
+
+                if let Some(ref w) = window {
+                    w.emit(
+                        "open-api-bulk-progress",
+                        OpenApiBulkProgressPayload {
+                            message,
+                            current: current_day as usize,
+                            total: total_days as usize,
+                            date: date_str.clone(),
+                            data_type: data_type.as_str().to_string(),
+                            status: "cached".to_string(),
+                        },
+                    )
+                    .ok();
+                }
+
+                skipped_count += 1;
+                current_date += Duration::days(1);
+                continue;
+            }
+
+            // STEP 2: APIからデータ取得
+            let message = format!("🌐 Fetching {} for {}", data_type.as_str(), date_str);
+            println!("{}", message);
+
+            if let Some(ref w) = window {
+                w.emit(
+                    "open-api-bulk-progress",
+                    OpenApiBulkProgressPayload {
+                        message: message.clone(),
+                        current: current_day as usize,
+                        total: total_days as usize,
+                        date: date_str.clone(),
+                        data_type: data_type.as_str().to_string(),
+                        status: "fetching".to_string(),
+                    },
+                )
+                .ok();
+            }
+
+            match self.fetch_data(data_type, &date_str).await {
+                Ok(json_data) => {
+                    // STEP 3: データベースに保存
+                    let save_result = match data_type {
+                        ApiDataType::Previews => {
+                            self.save_previews_data(&date_str, &json_data).await
+                        }
+                        ApiDataType::Results => {
+                            self.save_results_data(&date_str, &json_data).await
+                        }
+                        ApiDataType::Programs => {
+                            self.save_programs_data(&date_str, &json_data).await
+                        }
+                    };
+
+                    match save_result {
+                        Ok(count) => {
+                            let message = format!("💾 Saved {} records for {}", count, date_str);
+                            println!("{}", message);
+
+                            if let Some(ref w) = window {
+                                w.emit(
+                                    "open-api-bulk-progress",
+                                    OpenApiBulkProgressPayload {
+                                        message,
+                                        current: current_day as usize,
+                                        total: total_days as usize,
+                                        date: date_str.clone(),
+                                        data_type: data_type.as_str().to_string(),
+                                        status: "saved".to_string(),
+                                    },
+                                )
+                                .ok();
+                            }
+
+                            success_count += 1;
+                        }
+                        Err(e) => {
+                            let error_msg = format!("Database save error: {}", e);
+                            println!("⚠️  {}: {}", date_str, error_msg);
+                            errors.push(BulkFetchError {
+                                date: date_str.clone(),
+                                error_message: error_msg,
+                            });
+                            error_count += 1;
+                        }
+                    }
+                }
+                Err(e) => {
+                    // API取得失敗 - ログに記録して継続
+                    println!("⚠️  Failed to fetch {}: {}", date_str, e);
+
+                    if let Some(ref w) = window {
+                        w.emit(
+                            "open-api-bulk-progress",
+                            OpenApiBulkProgressPayload {
+                                message: format!("❌ Error: {}", e),
+                                current: current_day as usize,
+                                total: total_days as usize,
+                                date: date_str.clone(),
+                                data_type: data_type.as_str().to_string(),
+                                status: "error".to_string(),
+                            },
+                        )
+                        .ok();
+                    }
+
+                    errors.push(BulkFetchError {
+                        date: date_str.clone(),
+                        error_message: e,
+                    });
+                    error_count += 1;
+                }
+            }
+
+            // STEP 4: レート制限（API負荷を避けるため）
+            if current_day < total_days {
+                sleep(TokioDuration::from_millis(500)).await;
+            }
+
+            current_date += Duration::days(1);
+        }
+
+        // 最終完了通知
+        let completion_message = format!(
+            "✅ Bulk fetch completed: {} success, {} skipped, {} errors",
+            success_count, skipped_count, error_count
+        );
+        println!("{}", completion_message);
+
+        if let Some(ref w) = window {
+            w.emit(
+                "open-api-bulk-progress",
+                OpenApiBulkProgressPayload {
+                    message: completion_message,
+                    current: total_days as usize,
+                    total: total_days as usize,
+                    date: end_date.to_string(),
+                    data_type: data_type.as_str().to_string(),
+                    status: "completed".to_string(),
+                },
+            )
+            .ok();
+        }
+
+        Ok(BulkFetchSummary {
+            total_days: total_days as usize,
+            success_count,
+            error_count,
+            skipped_count,
+            errors,
+        })
     }
 }
