@@ -1,16 +1,16 @@
 import { useEffect } from "react";
 import { useOpenApi } from "../hooks/useOpenApi";
-import { PayoutType } from "../types/OpenApiData";
-import { HighPayoutSearchForm } from "../components/forms/HighPayoutSearchForm";
-import { RaceResultCard } from "../components/parts/RaceResultCard";
+import { SearchParams } from "../types/AdvancedSearch";
+import { AdvancedSearchForm } from "../components/forms/AdvancedSearchForm";
+import { AdvancedRaceResultCard } from "../components/parts/AdvancedRaceResultCard";
 import { PayoutStatsDisplay } from "../components/parts/PayoutStatsDisplay";
 
 const HighPayoutSearch = () => {
   const {
-    searchState,
     statsState,
-    searchHighPayoutRaces,
+    advancedSearchState,
     getPayoutStatistics,
+    searchAdvanced,
   } = useOpenApi();
 
   // 初期ロード時に統計情報を取得
@@ -18,21 +18,17 @@ const HighPayoutSearch = () => {
     getPayoutStatistics();
   }, []);
 
-  const handleSearch = async (
-    minPayout: number,
-    payoutType: PayoutType,
-    limit: number
-  ) => {
+  const handleAdvancedSearch = async (params: SearchParams) => {
     try {
-      await searchHighPayoutRaces(minPayout, payoutType, limit);
+      await searchAdvanced(params);
     } catch (error) {
-      console.error("Search failed:", error);
+      console.error("Advanced search failed:", error);
     }
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
-      <h1>高配当レース検索</h1>
+    <div style={{ padding: "20px", maxWidth: "1400px", margin: "0 auto" }}>
+      <h1>レース詳細検索</h1>
 
       {/* 統計情報表示 */}
       <div style={{ marginBottom: "30px" }}>
@@ -49,9 +45,9 @@ const HighPayoutSearch = () => {
       {/* 検索フォーム */}
       <div style={{ marginBottom: "30px" }}>
         <h2>検索条件</h2>
-        <HighPayoutSearchForm
-          onSearch={handleSearch}
-          isLoading={searchState.status === "loading"}
+        <AdvancedSearchForm
+          onSearch={handleAdvancedSearch}
+          isLoading={advancedSearchState.status === "loading"}
         />
       </div>
 
@@ -59,20 +55,20 @@ const HighPayoutSearch = () => {
       <div>
         <h2>
           検索結果
-          {searchState.results.length > 0 && (
+          {advancedSearchState.results.length > 0 && (
             <span style={{ marginLeft: "10px", fontSize: "16px", color: "#666" }}>
-              ({searchState.results.length}件)
+              ({advancedSearchState.results.length}件)
             </span>
           )}
         </h2>
 
-        {searchState.status === "loading" && (
+        {advancedSearchState.status === "loading" && (
           <div style={{ padding: "40px", textAlign: "center", color: "#666" }}>
             検索中...
           </div>
         )}
 
-        {searchState.status === "error" && (
+        {advancedSearchState.status === "error" && (
           <div
             style={{
               padding: "20px",
@@ -81,11 +77,11 @@ const HighPayoutSearch = () => {
               borderRadius: "4px",
             }}
           >
-            エラー: {searchState.error}
+            エラー: {advancedSearchState.error}
           </div>
         )}
 
-        {searchState.status === "success" && searchState.results.length === 0 && (
+        {advancedSearchState.status === "success" && advancedSearchState.results.length === 0 && (
           <div
             style={{
               padding: "40px",
@@ -99,17 +95,17 @@ const HighPayoutSearch = () => {
           </div>
         )}
 
-        {searchState.status === "success" && searchState.results.length > 0 && (
+        {advancedSearchState.status === "success" && advancedSearchState.results.length > 0 && (
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(500px, 1fr))",
               gap: "20px",
             }}
           >
-            {searchState.results.map((result, index) => (
-              <RaceResultCard
-                key={`${result.race_date}-${result.race_stadium_number}-${result.race_number}`}
+            {advancedSearchState.results.map((result, index) => (
+              <AdvancedRaceResultCard
+                key={result[0].id}
                 result={result}
                 index={index}
               />

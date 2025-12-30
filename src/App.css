@@ -1307,3 +1307,126 @@ button {
   color: #F44336;
   font-size: 18px;
 }
+
+/* 選手情報テーブル */
+.participants-table {
+  margin-top: 15px;
+  overflow-x: auto;
+}
+
+.participants-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.participants-table th,
+.participants-table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.participants-table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+.participants-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* 展開ボタン */
+.expand-button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #90caf9;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.expand-button:hover {
+  background-color: #bbdefb;
+}
+
+/* 詳細検索フォーム */
+.advanced-search-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.advanced-search-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+/* タブボタン */
+.tab-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tab-button.active {
+  background-color: #2196F3;
+  color: white;
+}
+
+.tab-button.inactive {
+  background-color: #e0e0e0;
+  color: black;
+}
+
+.tab-button:hover {
+  opacity: 0.8;
+}
+
+@media (prefers-color-scheme: dark) {
+  .participants-table th {
+    background-color: #4a4a4a;
+    color: #f6f6f6;
+  }
+
+  .participants-table tr:hover {
+    background-color: #4a4a4a;
+  }
+
+  .participants-table td,
+  .participants-table th {
+    border-bottom-color: #666;
+  }
+
+  .expand-button {
+    background-color: #2d5a8f;
+    color: #24c8db;
+    border-color: #24c8db;
+  }
+
+  .expand-button:hover {
+    background-color: #3d6a9f;
+  }
+
+  .advanced-search-section {
+    background-color: #4a4a4a;
+  }
+
+  .advanced-search-section h4 {
+    color: #f6f6f6;
+  }
+}

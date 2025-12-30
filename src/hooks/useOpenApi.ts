@@ -2,6 +2,7 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { DataType, OpenApiState, PayoutType, RaceResult, PayoutStats, SearchState, StatsState } from "../types/OpenApiData";
+import { SearchParams, AdvancedSearchResult, AdvancedSearchState } from "../types/AdvancedSearch";
 
 export const useOpenApi = () => {
   const [state, setState] = useState<OpenApiState>({
@@ -31,6 +32,13 @@ export const useOpenApi = () => {
   const [statsState, setStatsState] = useState<StatsState>({
     status: "idle",
     stats: null,
+    error: null,
+  });
+
+  // 詳細検索用のstate
+  const [advancedSearchState, setAdvancedSearchState] = useState<AdvancedSearchState>({
+    status: "idle",
+    results: [],
     error: null,
   });
 
@@ -226,6 +234,43 @@ export const useOpenApi = () => {
     }
   };
 
+  // 詳細検索（複合条件）
+  const searchAdvanced = async (params: SearchParams) => {
+    setAdvancedSearchState({
+      status: "loading",
+      results: [],
+      error: null,
+    });
+
+    try {
+      const results = await invoke<AdvancedSearchResult[]>(
+        "search_races_advanced",
+        { params }
+      );
+
+      console.log(`Found ${results.length} races with advanced search`);
+
+      setAdvancedSearchState({
+        status: "success",
+        results,
+        error: null,
+      });
+
+      return results;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Failed to search races:", errorMessage);
+
+      setAdvancedSearchState({
+        status: "error",
+        results: [],
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  };
+
   return {
     date: state.date,
     status: state.status,
@@ -234,10 +279,12 @@ export const useOpenApi = () => {
     exportError: state.exportError,
     searchState,
     statsState,
+    advancedSearchState,
     setDate,
     fetchData,
     exportToCsv,
     searchHighPayoutRaces,
     getPayoutStatistics,
+    searchAdvanced,
   };
 };

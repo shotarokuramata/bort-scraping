@@ -25,4 +25,21 @@ export const kyoteiPlaces: { [key: number]: string } = {
   24: "大村"
 };
 
+// 級別選択肢
+export const racerClasses = [
+  { value: 1, label: "A1" },
+  { value: 2, label: "A2" },
+  { value: 3, label: "B1" },
+  { value: 4, label: "B2" },
+];
+
+// レースグレード選択肢
+export const raceGrades = [
+  { value: 1, label: "SG" },
+  { value: 2, label: "G1" },
+  { value: 3, label: "G2" },
+  { value: 4, label: "G3" },
+  { value: 5, label: "一般" },
+];
+
 
